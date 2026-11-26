@@ -1,17 +1,21 @@
 // 앱 시작: 저장 불러오기 → 펫 창 → 시뮬레이션 루프(30fps) → 주기적 저장
 const path = require("path");
-const { app, screen, ipcMain } = require("electron");
+const { app, screen, ipcMain, shell, BrowserWindow } = require("electron");
 const { loadSave, writeSave } = require("../core/save.js");
 const { renderAllFrames } = require("../sprites/frames.js");
 const { createPetController, petWindowSize } = require("./petController.js");
 const { createPetWindow } = require("./petWindow.js");
-const { bubbleText } = require("./i18n.js");
+const { bubbleText, STRINGS } = require("./i18n.js");
+const { createTray } = require("./tray.js");
+const { openSettings } = require("./settingsWindow.js");
+const diag = require("./diagnostics.js");
 
 const FPS = 30, SAVE_EVERY_MS = 5000;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
-const state = { win: null, controller: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [] };
+const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [] };
+process.on("uncaughtException", e => diag.log("uncaught", e.stack || String(e)));
 
 const displaysNow = () => screen.getAllDisplays().map(d => ({ id: d.id, bounds: d.bounds, workArea: d.workArea }));
 
@@ -26,6 +30,16 @@ function save() {
   try { writeSave(state.file, state.controller.getSave()); } catch (e) { state.hooks.forEach(h => h("save-error", e)); }
 }
 
+function toggleHidden() {
+  state.hidden = !state.hidden;
+  if (state.hidden) state.win.hide(); else state.win.showInactive();
+  diag.log("hidden", state.hidden);
+}
+
+function applyStartup(settings) {
+  if (process.platform === "win32" && app.isPackaged) app.setLoginItemSettings({ openAtLogin: !!settings.launchAtStartup });
+}
+
 function start() {
   state.lang = (state.data.settings.language) || (app.getLocale().startsWith("ko") ? "ko" : "en");
   state.win = createPetWindow(state.data.settings.scale);
@@ -36,7 +50,7 @@ function start() {
       const { w, h } = petWindowSize(state.controller ? state.controller.getSave().settings.scale : state.data.settings.scale);
       state.win.setBounds({ x: p.x, y: p.y, width: w, height: h });
     },
-    onBubble: b => state.win.webContents.send("pet:bubble", { ...b, text: bubbleText(b, state.lang) })
+    onBubble: b => { diag.log("bubble", b.kind); state.win.webContents.send("pet:bubble", { ...b, text: bubbleText(b, state.lang) }); }
   });
 
   ipcMain.on("pet:ready", () => sendFrames());
@@ -47,9 +61,43 @@ function start() {
     else if (p.type === "move") state.controller.drag(p.x, p.y);
     else state.controller.release(p.x, p.y, Date.now());
   });
-  ipcMain.on("pet:context", () => state.hooks.forEach(h => h("context")));
+  ipcMain.on("pet:context", () => { state.tray.popup(state.win); state.hooks.forEach(h => h("context")); });
 
-  const refresh = () => state.controller.setDisplays(displaysNow());
+  const handlers = {
+    feed: () => { if (state.hidden) toggleHidden(); state.controller.feed(); },
+    summon: () => { if (state.hidden) toggleHidden(); state.controller.summon(); diag.log("summon"); },
+    toggleHidden,
+    settings: () => openSettings(),
+    toggleDebug: () => { state.debug = !state.debug; state.win.webContents.send("pet:debug", state.debug); diag.log("debug", state.debug); },
+    exportLog: () => {
+      const file = diag.exportLog(app.getPath("desktop"), { version: app.getVersion(), os: process.getSystemVersion(), displays: displaysNow(), body: state.controller.getBody() });
+      shell.showItemInFolder(file);
+    },
+    quit: () => app.quit()
+  };
+  const pet = state.controller.getPet();
+  state.tray = createTray({ spec: pet.spec, name: pet.name, lang: () => state.lang, getState: () => ({ hidden: state.hidden, debug: state.debug }), handlers });
+
+  ipcMain.handle("settings:get", () => {
+    const settings = state.controller.getSave().settings;
+    const table = STRINGS[state.lang];
+    const text = {};
+    for (const k of ["title", "size", "size2", "size3", "size4", "startup", "language", "close"]) text[k] = table["settings." + k];
+    return { settings, text };
+  });
+  ipcMain.handle("settings:set", (_e, patch) => {
+    const settings = state.controller.getSave().settings;
+    if (patch.scale && [2, 3, 4].includes(patch.scale)) { state.controller.setScale(patch.scale); state.win.webContents.send("pet:scale", patch.scale); }
+    if (typeof patch.launchAtStartup === "boolean") { settings.launchAtStartup = patch.launchAtStartup; applyStartup(settings); }
+    if (patch.language === "ko" || patch.language === "en") { settings.language = patch.language; state.lang = patch.language; }
+    diag.log("settings", patch);
+    save();
+    return settings;
+  });
+  ipcMain.on("settings:close", e => BrowserWindow.fromWebContents(e.sender)?.close());
+  applyStartup(state.controller.getSave().settings);
+
+  const refresh = () => { diag.log("displays", displaysNow()); state.controller.setDisplays(displaysNow()); };
   screen.on("display-added", refresh);
   screen.on("display-removed", refresh);
   screen.on("display-metrics-changed", refresh);
@@ -68,7 +116,9 @@ function start() {
 app.whenReady().then(() => {
   state.file = path.join(app.getPath("userData"), "save.json");
   const lang = app.getLocale().startsWith("ko") ? "ko" : "en";
-  state.data = loadSave(state.file, Date.now(), lang).data;
+  const loaded = loadSave(state.file, Date.now(), lang);
+  state.data = loaded.data;
+  diag.log("start", { recovered: loaded.recovered, lang, version: app.getVersion() });
   start();
 });
 
