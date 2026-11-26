@@ -61,19 +61,30 @@ test("rolling over shows the whole pet upside down with paws up", () => {
   }
 });
 
-test("a held pet hangs with its legs stretched down below its body", () => {
-  for (const id of ["shiba", "cheese"]) {
-    const { px } = renderKeys(PRESETS.find(p => p.id === id).spec, "held", 0, {});
-    const rows = px.map((k, i) => (k ? Math.floor(i / 48) : -1)).filter(y => y >= 0);
-    const top = Math.min(...rows), bottom = Math.max(...rows);
-    assert.ok(bottom - top >= 36, `${id}: hanging height ${bottom - top}`);
-    // 몸 아래로 다리만 보이는 줄(따로 떨어진 다리가 2개 이상)이 7줄 이상 이어진다
-    let legRows = 0;
-    for (let y = bottom; y > top; y--) {
-      const row = px.slice(y * 48, y * 48 + 48).map(Boolean);
-      const runs = row.reduce((n, on, i) => n + (on && !row[i - 1] ? 1 : 0), 0);
-      if (runs >= 2) legRows++; else break;
-    }
-    assert.ok(legRows >= 7, `${id}: rows of dangling legs ${legRows}`);
+test("a held pet faces front, hooks its front paws up and dangles its hind paws with pads showing", () => {
+  for (const id of ["shiba", "maltese", "cheese", "black"]) {
+    const spec = PRESETS.find(p => p.id === id).spec;
+    const { px } = renderKeys(spec, "held", 0, {});
+    const cols = key => px.map((k, i) => (k === key ? i % 48 : -1)).filter(x => x >= 0);
+    const rows = key => px.map((k, i) => (k === key ? Math.floor(i / 48) : -1)).filter(y => y >= 0);
+    // 정면 얼굴: 코가 두 눈 가운데에 있다
+    const noseKey = spec.species === "dog" ? "N" : "Q";
+    const noseX = (Math.min(...cols(noseKey)) + Math.max(...cols(noseKey))) / 2;
+    const eyeX = cols("H");
+    const mid = (Math.min(...eyeX) + Math.max(...eyeX) + 1) / 2;
+    assert.ok(Math.abs(noseX - mid) <= 1.5, `${id}: nose x ${noseX}, eyes mid ${mid}`);
+    // 뒷발 두 개가 맨 아래에 따로 늘어져 있고 발바닥 젤리가 보인다
+    const painted = px.map((k, i) => (k ? Math.floor(i / 48) : -1)).filter(y => y >= 0);
+    const bottom = Math.max(...painted);
+    const row = px.slice((bottom - 1) * 48, bottom * 48).map(Boolean);
+    const runs = row.reduce((n, on, i) => n + (on && !row[i - 1] ? 1 : 0), 0);
+    assert.ok(runs >= 2, `${id}: two hind paws at the bottom (${runs})`);
+    assert.ok(rows("PAD").filter(y => y >= bottom - 7).length >= 6, `${id}: paw pads`);
+    // 앞발이 턱 양옆에 걸쳐 있다: 눈보다 아래, 몸 위쪽 절반에서 머리 양옆으로 나온 칸
+    const eyeRows = rows("H");
+    const pawRow = Math.max(...eyeRows) + 6;
+    const line = px.slice(pawRow * 48, pawRow * 48 + 48).map(Boolean);
+    const left = line.indexOf(true), right = line.lastIndexOf(true);
+    assert.ok(right - left >= 26, `${id}: paws spread wide at row ${pawRow} (${right - left})`);
   }
 });

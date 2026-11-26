@@ -1,5 +1,5 @@
 // 스펙 → 팔레트(색 키 → '#rrggbb'). 털색 하나에서 명암 5단계를 만든다.
-const COMMON = { K: "#1b1214", H: "#ffffff", S: "#d9e6ff", P: "#f07a8c", PD: "#7c2a3a", B: "#f6a0ae" };
+const COMMON = { K: "#1b1214", H: "#ffffff", S: "#d9e6ff", P: "#f07a8c", PD: "#7c2a3a", B: "#f6a0ae", PAD: "#8a5a5e" };
 const YELLOW = 50, PURPLE = 330;
 
 const clamp01 = v => Math.min(1, Math.max(0, v));

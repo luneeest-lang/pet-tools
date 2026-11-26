@@ -187,24 +187,26 @@ const POSE_EXTRA = {
       legs: [{ dx: -3.5, dy: -2.1, ry: 3.8 }, { dx: 3.5, dy: -2.1, ry: 3.8 }, { dx: -3.5, dy: -2.5, ry: 3.8 }, { dx: 3.5, dy: -2.5, ry: 3.8 }] });
     return { ...r, face: { eyes: "open", mouth: "o" } };
   },
+  // 집혀서 대롱대롱: 정면을 보고, 앞발 두 개를 턱 양옆에 걸치고, 몸은 아래로 늘어지고,
+  // 뒷발은 앞으로 축 늘어져 발바닥 젤리가 보인다.
   held: (B, f, flags, add) => {
-    // 목덜미를 잡힌 모습: 몸이 세로로 길게 늘어지고 네 다리가 아래로 쭉 뻗는다
     const dog = B.species === "dog";
-    const sw = f === 1 ? 0.7 : -0.7;
-    if (dog) {
-      if (B.tail === "curl") add({ g: "tail", z: 0, s: { cx: 15, cy: 33, rx: 3.8, ry: 3.6 }, cream: [{ cx: 15.6, cy: 33.7, rx: 1.8, ry: 1.7 }] });
-      else add({ g: "tail", z: 0, s: { cx: 15.5 - sw, cy: 34, rx: 2.8, ry: 5, fluff: 0.13, lobes: 7 } });
-    } else {
-      add(catTail(t => [17 - 2 * t - sw * t, 31 + 8 * t, 2 - 0.5 * t], 8, 0, B));
-    }
-    const lr = dog ? 2.1 : 1.8;
-    add({ g: "legF", z: 1, s: leg(19 - sw * 0.5, 34.6, lr, 4.9), dark: true, sock: B.socks });
-    add({ g: "legF", z: 1, s: leg(27.5 + sw * 0.5, 34.2, lr, 5.1), dark: true, sock: B.socks });
-    add({ g: "body", z: 2, s: { cx: 23, cy: 23.5, rx: 6, ry: 7.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 24.3, cy: 25.5, rx: 3.4, ry: 5 }] : [] });
-    add({ g: "legN", z: 3, s: leg(17.5 + sw * 0.5, 34.8, lr, 4.9), sock: B.socks });
-    add({ g: "legN2", z: 3.1, s: leg(29 - sw * 0.5, 34.4, lr, 5.1), sock: B.socks });
-    const head = headParts(B, 25.5, 13.5, add, { earTip: 1 });
-    return { head, shadow: { cx: 24, cy: 38.8, rx: 0.1, ry: 0.1 } };
+    const sw = f === 1 ? 0.6 : -0.6;
+    const hx = 24, hy = 14.5;
+    add({ g: "armL", z: 1, s: leg(16.5, 24.5, 2.6, 4.6), dark: true });
+    add({ g: "armR", z: 1, s: leg(31.5, 24.5, 2.6, 4.6), dark: true });
+    add({ g: "body", z: 2, s: { cx: 24 + sw * 0.3, cy: 29, rx: 8, ry: 7.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true,
+          cream: B.belly ? [{ cx: 24 + sw * 0.3, cy: 30, rx: 5, ry: 5.4 }] : [] });
+    add({ g: "hindL", z: 3, s: leg(18.2 + sw, 35.8 - sw * 0.5, 3.4, 3.2), sock: B.socks, sockRows: 3 });
+    add({ g: "hindR", z: 3, s: leg(29.8 + sw, 35.8 + sw * 0.5, 3.4, 3.2), sock: B.socks, sockRows: 3 });
+    const head = headParts(B, hx, hy, add, { earTip: 0 });
+    add({ g: "pawL", z: 6, s: { cx: 14, cy: 21.6, rx: 3.4, ry: 2.6 }, sock: B.socks, sockRows: 2 });
+    add({ g: "pawR", z: 6, s: { cx: 34, cy: 21.6, rx: 3.4, ry: 2.6 }, sock: B.socks, sockRows: 2 });
+    // 뒷발 젤리: 큰 젤리 하나 + 발가락 젤리 3개
+    const pad = (cx, cy) => ({ x: Math.round(cx) - 2, y: Math.round(cy) - 2, rows: ["A.A.A", ".....", ".AAA.", ".AAA."], key: "PAD" });
+    return { head, shadow: { cx: 24, cy: 38.8, rx: 0.1, ry: 0.1 },
+      face: { eyes: "open", mouth: "smile", front: true },
+      stamps: [pad(18.2 + sw, 35.8 - sw * 0.5), pad(29.8 + sw, 35.8 + sw * 0.5)] };
   },
   lookdown: (B, f, flags, add) => sitParts(B, 0, {}, add, { headDx: 2, headDy: 2.5, earTip: 1 }),
   stretch: (B, f, flags, add) => {
@@ -253,8 +255,8 @@ function buildParts(spec, pose, f, flags) {
   const builder = POSE_BUILDERS[pose];
   if (!builder) throw new Error(`unknown pose: ${pose}`);
   const parts = [];
-  const { head, shadow, face, flip, vflip, shiftY } = builder(B, f, flags || {}, p => parts.push(p));
-  return { parts, head, shadow, face, flip: !!flip, vflip: !!vflip, shiftY: shiftY || 0, traits: B };
+  const { head, shadow, face, flip, vflip, shiftY, stamps } = builder(B, f, flags || {}, p => parts.push(p));
+  return { parts, head, shadow, face, flip: !!flip, vflip: !!vflip, shiftY: shiftY || 0, stamps: stamps || [], traits: B };
 }
 
 module.exports = { traitsOf, buildParts, POSE_BUILDERS, headParts, catTail, walkPhase, leg };

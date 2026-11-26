@@ -123,7 +123,8 @@ function paintFace(px, B, head, face, darkCoat) {
     if (ch !== ".") put(x0 + dx, y0 + dy, STAMP_KEYS[ch]);
   }));
   const dog = B.species === "dog";
-  const eyesX = dog ? [hx - 6, hx + 4] : CAT_EYE_X.map(d => hx + d);
+  // 정면 얼굴은 눈·코를 머리 가운데에 맞춘다(평소에는 오른쪽을 보는 3/4 얼굴)
+  const eyesX = face.front ? [hx - 7, hx + 3] : dog ? [hx - 6, hx + 4] : CAT_EYE_X.map(d => hx + d);
   const ey = hy + EYE_Y;
   eyesX.forEach((ex, idx) => {
     if (face.eyes === "yawn") {
@@ -139,7 +140,7 @@ function paintFace(px, B, head, face, darkCoat) {
      [hx - 10, hy + 2], [hx - 11, hy + 3], [hx + 10, hy + 2], [hx + 11, hy + 3]]
       .forEach(([x, y]) => { const c = px[y * GW + x]; if (c && c[0] === "F") put(x, y, "F3"); });
   }
-  const cx = dog ? hx + 1 : hx - 1, ny = hy + 2 + NOSE_DY;
+  const cx = face.front ? hx : dog ? hx + 1 : hx - 1, ny = hy + 2 + NOSE_DY;
   if (dog) stamp(cx - 1, ny, ["NnN", "NNN", ".N."]);
   else stamp(cx - 1, ny, ["QQQ", ".Q."]);
   const my = dog ? ny + 3 : ny + 2;
@@ -150,7 +151,7 @@ function paintFace(px, B, head, face, darkCoat) {
     [[cx - 2, my], [cx - 1, my + 1], [cx, my], [cx + 1, my + 1], [cx + 2, my]].forEach(([x, y]) => put(x, y, "MO"));
     if (face.tongue) { put(cx - 1, my + 2, "P"); put(cx, my + 2, "P"); put(cx + 1, my + 2, "P"); put(cx, my + 3, "P"); }
   }
-  const blush = dog ? [hx - 9, hx + 10] : [hx - 8, hx + 6];
+  const blush = face.front ? [hx - 10, hx + 9] : dog ? [hx - 9, hx + 10] : [hx - 8, hx + 6];
   blush.forEach(bx => { put(bx, hy + 2, "B"); put(bx + 1, hy + 2, "B"); });
   if (!dog) {
     const wy = hy + 3;
@@ -163,13 +164,17 @@ function paintFace(px, B, head, face, darkCoat) {
 // 색 키 배열(px)까지만 만든다. 새 동작 그림의 테스트에서 키를 직접 볼 수 있게 따로 둔다.
 function renderKeys(spec, pose, frame, flags) {
   flags = flags || {};
-  const { parts, head, shadow, traits, face, flip, vflip, shiftY } = buildParts(spec, pose, frame, flags);
+  const { parts, head, shadow, traits, face, flip, vflip, shiftY, stamps } = buildParts(spec, pose, frame, flags);
   parts.forEach((p, i) => { p._o = i; });
   parts.sort((a, b) => a.z - b.z || a._o - b._o);
   const painted = paintBody(parts, vflip ? [LIGHT[0], -LIGHT[1]] : LIGHT);
   const { r2, t2 } = shadeContacts(parts, painted);
   const px = outline(painted.id, r2, t2);
   paintFace(px, traits, head, face || faceOf(pose, flags), isDarkCoat(spec));
+  for (const st of stamps) st.rows.forEach((r, dy) => [...r].forEach((ch, dx) => {
+    const x = st.x + dx, y = st.y + dy;
+    if (ch !== "." && x >= 0 && y >= 0 && x < GW && y < GH && px[y * GW + x]) px[y * GW + x] = st.key;
+  }));
   let out = flip ? mirror(px) : px;
   if (vflip) out = flipVertical(out, shiftY);
   return { px: out, shadowShape: shadow, flip };
