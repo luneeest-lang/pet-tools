@@ -302,3 +302,49 @@ test("hopping off a very high window falls with the surprised pose and still lan
   assert.ok(inOrder(keys, ["lookdown:0:", "fall:0:", "land:0:"]), keys.slice(0, 40).join(" "));
   for (const k of keys) assert.ok(KEYS.has(k), k);
 });
+
+test("patting the pet while it walks to the edge still lets it leave the window later", () => {
+  const { c, run, at } = setup({ rng: () => 0.45 });
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(0.3);
+  dropOn(c, at, 700, 500);
+  run(1.5);
+  let patted = false;
+  for (let i = 0; i < 200 * 15 && !patted; i++) {
+    run(1 / 15, 1 / 15);
+    if (c.getMode() === "toEdge") { c.pat(); patted = true; }
+  }
+  assert.ok(patted, "reached toEdge");
+  run(240, 1 / 15);
+  assert.ok(!(c.getBody().floorId || "").startsWith("win:"), `still on ${c.getBody().floorId}`);
+});
+
+test("unlocking a move while hanging does not leave the pet hanging forever", () => {
+  const { c, run, at } = setup({ rng: () => 0.7 });
+  c.getPet().affinity.points = 29;
+  c.getPet().affinity.lastCareDay = "2999-01-01";
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(0.3);
+  dropOn(c, at, 700, 500);
+  run(1.5);
+  for (let i = 0; i < 200 * 15 && c.getMode() !== "hang"; i++) run(1 / 15, 1 / 15);
+  assert.strictEqual(c.getMode(), "hang");
+  c.feed();
+  run(30, 1 / 15);
+  assert.notStrictEqual(c.getBody().state, "hang");
+});
+
+test("a window piece narrower than the pet does not make it flip back and forth", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.45 });
+  // 앞의 F가 A의 윗변 700~880을 가려 A에는 120px(펫 132px보다 좁음) 조각만 남는다.
+  c.setWindows([WIN(600, 500, 280, 400, "F"), WIN(700, 600, 300, 400, "A")]);
+  run(0.3);
+  const narrow = c.getFloors().find(f => f.windowId === "A");
+  assert.ok(narrow && narrow.x2 - narrow.x1 < 2 * 22 * 3, JSON.stringify(c.getFloors()));
+  dropOn(c, at, (narrow.x1 + narrow.x2) / 2, 500);
+  run(1.5);
+  const from = log.frames.length;
+  run(3);
+  const flips = log.frames.slice(from).reduce((n, f, i, a) => n + (i > 0 && a[i - 1].flip !== f.flip ? 1 : 0), 0);
+  assert.ok(flips <= 2, `flips ${flips}`);
+});

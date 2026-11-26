@@ -19,3 +19,9 @@ test("a maximized window that leaves the taskbar visible is not fullscreen", () 
 test("no foreground window (desktop or taskbar in front) is not fullscreen", () => {
   assert.strictEqual(isFullscreen(null, D), false);
 });
+
+test("on a monitor without a taskbar, a maximized window with a title bar is not fullscreen", () => {
+  const noBar = [{ id: 3, bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1080 } }];
+  assert.strictEqual(isFullscreen({ id: "m", x: 0, y: 0, width: 1920, height: 1080, caption: true }, noBar), false);
+  assert.strictEqual(isFullscreen({ id: "v", x: 0, y: 0, width: 1920, height: 1080, caption: false }, noBar), true);
+});

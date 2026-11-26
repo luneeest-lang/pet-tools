@@ -44,7 +44,8 @@
       "shortcutName": "Pet Tools"
     },
     "asarUnpack": [
-      "node_modules/koffi/**"
+      "node_modules/koffi/**",
+      "node_modules/@koromix/**"
     ]
   },
   "author": "luneeest-lang",

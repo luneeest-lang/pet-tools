@@ -24,3 +24,15 @@ test("physical pixels are converted to screen coordinates", () => {
   const [w] = toDipWindows([raw("A", { rect: { left: 300, top: 450, right: 1500, bottom: 1200 } })], 1, scale150);
   assert.deepStrictEqual(w, { id: "A", x: 200, y: 300, width: 800, height: 500 });
 });
+
+test("the title-bar flag is carried through", () => {
+  const [w] = toDipWindows([raw("A", { caption: true })], 1, identity);
+  assert.strictEqual(w.caption, true);
+});
+
+test("on other platforms the window reader reports why it is off", () => {
+  const { status } = require("../../src/main/win32/windows.js");
+  const s = status();
+  assert.strictEqual(s.platform, process.platform);
+  if (process.platform !== "win32") assert.strictEqual(s.loaded, false);
+});

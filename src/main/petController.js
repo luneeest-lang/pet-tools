@@ -50,7 +50,8 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   let lastKey = null, lastFlip = null, lastWin = null;
   const between = (a, b) => a + (b - a) * rng();
   let nextJumpAt = between(...JUMP_EVERY), stayUntil = Infinity;
-  let pending = null, edgeX = null, bigFall = false, climbTo = null;
+  let pending = null, edgeX = null, bigFall = false, climbTo = null, pendingTrick = null;
+  const DESCENT_MODES = ["toEdge", "lookdown", "crouch", "jump"];
 
   pet.stats = decay(pet.stats, now, { running: false });
 
@@ -85,7 +86,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
     const here = floorOf(body.floorId), d = displayOf(here);
     let best = null;
     for (const f of floors) {
-      if (f.kind !== "window") continue;
+      if (f.kind !== "window" || f.x2 - f.x1 < 2 * halfW()) continue;
       const rise = body.y - f.y;
       if (rise < 40 || rise > 0.6 * d.bounds.height) continue;
       const wide = f.x2 - f.x1 >= 2 * halfW();
@@ -153,6 +154,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   // 특별한 동작이 끝났을 때 다음으로 넘어가기
   function advance() {
     if (mode === "crouch" && pending) return launch();
+    if (pendingTrick && body.state === "ground") { const id = pendingTrick; pendingTrick = null; return setMode("trick", 2, id); }
     if (mode === "lookdown") return rng() < 0.6 ? jumpDown() : hang();
     if (mode === "toEdge") return setMode("lookdown", LOOKDOWN_SECONDS);
     pickNext();
@@ -161,11 +163,13 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   function care(kind) {
     const r = addCare(pet.affinity, kind, clock, localDay(clock));
     pet.affinity = r.aff;
-    for (const id of r.newlyUnlocked) {
-      bubble({ kind: "unlock", move: id });
-      setMode("trick", 2, id);
-    }
-    return r.newlyUnlocked.length > 0;
+    for (const id of r.newlyUnlocked) bubble({ kind: "unlock", move: id });
+    if (!r.newlyUnlocked.length) return false;
+    // 새 동작은 땅이나 창 위에 서서 쉬는 중일 때만 바로 보여 준다. 매달림·점프 중이면 내려선 뒤에.
+    const id = r.newlyUnlocked[r.newlyUnlocked.length - 1];
+    if (body.state === "ground" && !["held", ...DESCENT_MODES].includes(mode)) { setMode("trick", 2, id); return true; }
+    pendingTrick = id;
+    return false;
   }
 
   function walk(dt) {
@@ -173,6 +177,11 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
     if (!floor) return;
     let x = body.x + dir * WALK_SPEED * (scale / 3) * dt;
     const lo = floor.x1 + halfW(), hi = floor.x2 - halfW();
+    // 펫보다 좁은 조각 위에서는 걷지 않고 가운데 앉는다(좌우로 떨지 않게).
+    if (lo > hi && !floors.some(f => f !== floor && Math.abs(f.y - floor.y) <= 2 && (Math.abs(f.x1 - floor.x2) <= 1 || Math.abs(f.x2 - floor.x1) <= 1))) {
+      body = { ...body, x: (floor.x1 + floor.x2) / 2 };
+      return setMode("sit", 2);
+    }
     // 옆 화면 바닥이 같은 높이로 이어지면 경계를 넘어간다. 아니면 돌아선다.
     const next = dir > 0
       ? floors.find(f => f !== floor && Math.abs(f.y - floor.y) <= 2 && Math.abs(f.x1 - floor.x2) <= 1)
@@ -282,7 +291,11 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
           body = { ...body, x: reached ? edgeX : x };
           if (reached) setMode("lookdown", LOOKDOWN_SECONDS);
         }
-        const special = ["crouch", "toEdge", "lookdown", "land"].includes(mode);
+        // 내려가던 중에 쓰다듬기·밥·잠 등으로 끊겼으면, 잠시 뒤 다시 내려가도록 시간표를 되살린다.
+        if (stayUntil === Infinity && !DESCENT_MODES.includes(mode) && floorOf(body.floorId)?.kind === "window") {
+          stayUntil = t + 10; pending = null; edgeX = null;
+        }
+        const special = ["crouch", "toEdge", "lookdown", "land", "eat", "trick", "yawn"].includes(mode);
         if (!special && mode !== "sleep" && perch && t >= stayUntil && floorOf(body.floorId)?.kind === "window") {
           stayUntil = Infinity;
           goEdge();

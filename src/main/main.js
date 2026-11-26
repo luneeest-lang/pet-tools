@@ -10,7 +10,7 @@ const { createTray } = require("./tray.js");
 const { openSettings } = require("./settingsWindow.js");
 const diag = require("./diagnostics.js");
 const { hitTest } = require("./hitTest.js");
-const { listWindows, foregroundHwnd } = require("./win32/windows.js");
+const { listWindows, refreshWindow, foregroundHwnd, status: win32Status } = require("./win32/windows.js");
 const { toDipWindows } = require("./win32/convert.js");
 const { isFullscreen } = require("../core/fullscreen.js");
 
@@ -19,7 +19,7 @@ const FPS = 30, SAVE_EVERY_MS = 5000;
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [],
-  frames: {}, lastHit: null, pointerDown: false, fullscreenHidden: false, lastFloorsLog: "" };
+  frames: {}, lastHit: null, pointerDown: false, fullscreenHidden: false, lastFloorsLog: "", wins: [] };
 process.on("uncaughtException", e => diag.log("uncaught", e.stack || String(e)));
 process.on("unhandledRejection", e => diag.log("unhandled", (e && e.stack) || String(e)));
 
@@ -66,14 +66,25 @@ function toggleHidden() {
   diag.log("hidden", state.hidden);
 }
 
-// 창 목록 읽기: 0.2초마다, 펫이 창 위나 창 끝에 있으면 0.05초마다.
+const toDip = r => {
+  const rect = { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
+  return process.platform === "win32" ? screen.screenToDipRect(null, rect) : rect;
+};
+
+// 펫이 올라간 창 하나만 다시 읽어 위치를 갱신한다(0.05초마다). 전체 목록은 0.2초마다.
+function pollPerchedWindow(id) {
+  const raw = refreshWindow(id);
+  const [w] = raw ? toDipWindows([raw], process.pid, toDip) : [];
+  const next = state.wins.filter(x => x.id !== id);
+  if (w) next.splice(state.wins.findIndex(x => x.id === id), 0, w);
+  state.wins = next;
+  state.controller.setWindows(next);
+}
+
 function pollWindows() {
   const raw = listWindows();
-  const toDip = r => {
-    const rect = { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
-    return process.platform === "win32" ? screen.screenToDipRect(null, rect) : rect;
-  };
   const wins = toDipWindows(raw, process.pid, toDip);
+  state.wins = wins;
   state.controller.setWindows(wins);
   const settings = state.controller.getSave().settings;
   const fgId = foregroundHwnd();
@@ -118,7 +129,7 @@ function start() {
     settings: () => openSettings(),
     toggleDebug: () => { state.debug = !state.debug; state.win.webContents.send("pet:debug", state.debug); diag.log("debug", state.debug); },
     exportLog: () => {
-      const file = diag.exportLog(app.getPath("desktop"), { version: app.getVersion(), os: process.getSystemVersion(), displays: displaysNow(), body: state.controller.getBody() });
+      const file = diag.exportLog(app.getPath("desktop"), { version: app.getVersion(), os: process.getSystemVersion(), win32: win32Status(), displays: displaysNow(), body: state.controller.getBody(), floors: state.controller.getFloors() });
       shell.showItemInFolder(file);
     },
     quit: () => app.quit()
@@ -162,13 +173,15 @@ function start() {
     updateHit();
   }, 1000 / FPS);
   setInterval(save, SAVE_EVERY_MS);
+  diag.log("win32", win32Status());
   let polls = 0;
   setInterval(() => {
     polls++;
-    const onWindow = /^win:/.test(state.controller.getBody().floorId || "");
-    if (onWindow || polls % 4 === 0) {
-      try { pollWindows(); } catch (e) { diag.log("poll-error", e.stack || String(e)); }
-    }
+    const perched = /^win:/.test(state.controller.getBody().floorId || "") ? state.controller.getBody().floorId.split(":")[1] : null;
+    try {
+      if (polls % 4 === 0) pollWindows();
+      else if (perched) pollPerchedWindow(perched);
+    } catch (e) { diag.log("poll-error", e.stack || String(e)); }
   }, 50);
   state.hooks.forEach(h => h("started"));
 }

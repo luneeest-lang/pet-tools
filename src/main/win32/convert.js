@@ -9,7 +9,7 @@ function toDipWindows(raw, ownPid, toDip) {
     if (!(w.rect.right > w.rect.left && w.rect.bottom > w.rect.top)) continue;
     const d = toDip(w.rect);
     if (![d.x, d.y, d.width, d.height].every(Number.isFinite)) continue;
-    out.push({ id: String(w.hwnd), x: d.x, y: d.y, width: d.width, height: d.height });
+    out.push({ id: String(w.hwnd), x: d.x, y: d.y, width: d.width, height: d.height, ...(w.caption !== undefined ? { caption: !!w.caption } : {}) });
   }
   return out;
 }
