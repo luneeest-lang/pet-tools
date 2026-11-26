@@ -1,0 +1,1017 @@
+<title>데스크톱 펫 스타일 비교</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 큰 가짜 바탕화면 하나에 도트 펫을 살게 하고, 아래에 동작 시트와 다음 단계를 둔다 */
+:root {
+  --bg: #f1f3f8;
+  --surface: #ffffff;
+  --fg: #1c2030;
+  --muted: #5b6176;
+  --line: #dadeea;
+  --accent: #2f66d8;
+  --accent-soft: #e3ebfb;
+  --good: #1f8a5b;
+  --warn: #b86a12;
+  --wall-a: #a9cdee;
+  --wall-b: #d4e8d0;
+  --taskbar: rgba(240, 243, 250, 0.88);
+  --taskbar-fg: #1c2030;
+  --bubble: #ffffff;
+  --heart: #e8466a;
+  --cell: #e6edf6;
+  --font-display: "Jua", "Noto Sans KR", system-ui, sans-serif;
+  --font-body: "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #13151c; --surface: #1c1f29; --fg: #e8eaf3; --muted: #9ba1b6; --line: #2c3040;
+    --accent: #7ea3ff; --accent-soft: #24304d; --good: #4cc48d; --warn: #e5a04b;
+    --wall-a: #2b3d62; --wall-b: #34504a; --taskbar: rgba(16, 18, 26, 0.88); --taskbar-fg: #e8eaf3;
+    --bubble: #262a36; --heart: #ff6d8c; --cell: #252a38;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #13151c; --surface: #1c1f29; --fg: #e8eaf3; --muted: #9ba1b6; --line: #2c3040;
+  --accent: #7ea3ff; --accent-soft: #24304d; --good: #4cc48d; --warn: #e5a04b;
+  --wall-a: #2b3d62; --wall-b: #34504a; --taskbar: rgba(16, 18, 26, 0.88); --taskbar-fg: #e8eaf3;
+  --bubble: #262a36; --heart: #ff6d8c; --cell: #252a38;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 26px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; text-wrap: balance; line-height: 1.25; }
+h1 { font-size: clamp(28px, 4vw, 38px); }
+h2 { font-size: 24px; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 66ch; }
+.intro { display: flex; flex-direction: column; gap: 10px; }
+
+.palette-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.breeds { display: flex; flex-direction: column; gap: 10px; }
+.breeds .label { color: var(--muted); font-size: 14px; }
+.group-name { font-family: var(--font-display); font-size: 16px; min-width: 3.5em; }
+.compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.compare figure { margin: 0; background: var(--cell); border-radius: 10px; padding: 14px 10px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.compare canvas { width: 192px; max-width: 100%; height: auto; }
+.compare figcaption { font-size: 13px; color: var(--muted); }
+.compare figcaption b { color: var(--fg); font-weight: 500; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--fg);
+  border-radius: 999px; padding: 6px 14px 6px 8px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.chip .sw { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip:focus-visible, button:focus-visible, .pet:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+.desk { position: relative; height: 340px; border-radius: 10px; overflow: hidden; background: linear-gradient(170deg, var(--wall-a), var(--wall-b)); user-select: none; }
+.desk-icons { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 14px; }
+.dicon { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 62px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.dicon i { display: block; width: 34px; height: 28px; border-radius: 5px; background: rgba(255,255,255,.75); box-shadow: inset 0 -6px 0 rgba(47,102,216,.35); }
+.dicon:nth-child(2) i { box-shadow: inset 0 -6px 0 rgba(232,70,106,.4); }
+.window { position: absolute; top: 22px; right: 22px; width: min(44%, 380px); height: 150px; border-radius: 8px; background: var(--surface); opacity: .94; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.15); }
+.window::before { content: ""; display: block; height: 24px; border-bottom: 1px solid var(--line); background: var(--bg); border-radius: 8px 8px 0 0; }
+.window span { display: block; height: 7px; margin: 12px 14px 0; border-radius: 4px; background: var(--line); }
+.window span:nth-child(2) { width: 60%; }
+.taskbar { position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: var(--taskbar); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--taskbar-fg); }
+.taskbar .app { width: 24px; height: 24px; border-radius: 6px; background: var(--line); }
+.taskbar .app.start { background: var(--accent); border-radius: 50%; }
+.taskbar .clock { position: absolute; right: 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.pet { position: absolute; bottom: 38px; z-index: 2; left: 0; cursor: pointer; will-change: transform; border-radius: 8px; }
+.bowl { position: absolute; bottom: 40px; z-index: 1; }
+.bowl[hidden] { display: none !important; }
+.bubble { position: absolute; padding: 4px 10px; border-radius: 12px; background: var(--bubble); color: var(--fg); font-size: 13px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.18); transform: translateX(-50%); pointer-events: none; animation: pop 1.6s ease-out forwards; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 6px); } 12% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+.heart { position: absolute; pointer-events: none; animation: float 1.3s ease-out forwards; }
+@keyframes float { from { opacity: 1; transform: translate(0, 0); } to { opacity: 0; transform: translate(var(--dx), -64px); } }
+.zzz { position: absolute; font-family: var(--font-display); color: var(--accent); background: var(--bubble); padding: 0 8px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.15); pointer-events: none; font-size: 15px; }
+.zzz[hidden] { display: none !important; }
+
+.row { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-size: 14px; border-radius: 8px; padding: 7px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .btn.primary { color: #10131b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #10131b; } }
+.stats { display: grid; grid-template-columns: auto minmax(120px, 220px) auto; gap: 6px 10px; align-items: center; font-size: 13px; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar b { display: block; height: 100%; background: var(--good); border-radius: 4px; transition: width .4s; }
+.bar b.low { background: var(--warn); }
+.stats .num { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 3ch; text-align: right; }
+.mode { font-size: 13px; color: var(--muted); }
+.mode strong { color: var(--fg); font-weight: 500; }
+
+.sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.cell { background: var(--cell); border-radius: 10px; padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cell canvas { width: 144px; max-width: 100%; height: auto; }
+.cell span { font-size: 12px; color: var(--muted); }
+.spec { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.spec div { border-top: 2px solid var(--accent); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.spec b { font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.spec p { font-size: 14px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); max-width: 75ch; }
+
+@media (prefers-reduced-motion: reduce) { .bubble, .heart { animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>우리 아이 도트 펫</h1>
+    <p class="lede">윈도우 바탕화면에 사는 도트 펫 예시입니다. 작업 표시줄 위를 걷다가 앉아서 쉬고, 가끔 잠을 잡니다. 펫을 클릭하면 좋아하고, 밥을 주면 그릇이 나옵니다. 품종을 바꾸면 귀 모양, 꼬리, 무늬가 함께 바뀝니다. 이번에 고양이 3종을 추가하고 그림을 한 단계 다듬었습니다.</p>
+  </header>
+
+  <div class="breeds">
+    <p class="label">품종 (사진에서 읽어 낸 특징이라고 가정)</p>
+    <div class="palette-row" role="group" aria-label="강아지 품종">
+      <span class="group-name">강아지</span>
+      <button class="chip" type="button" id="br-shiba" data-breed="shiba" aria-pressed="true"><span class="sw" style="background:#e48b3c"></span>시바견</button>
+      <button class="chip" type="button" id="br-maltese" data-breed="maltese" aria-pressed="false"><span class="sw" style="background:#f5f1ec"></span>몰티즈</button>
+      <button class="chip" type="button" id="br-blacktan" data-breed="blacktan" aria-pressed="false"><span class="sw" style="background:#443b4a"></span>블랙탄</button>
+    </div>
+    <div class="palette-row" role="group" aria-label="고양이 품종">
+      <span class="group-name">고양이</span>
+      <button class="chip" type="button" id="br-cheese" data-breed="cheese" aria-pressed="false"><span class="sw" style="background:#eea158"></span>치즈 태비</button>
+      <button class="chip" type="button" id="br-tuxedo" data-breed="tuxedo" aria-pressed="false"><span class="sw" style="background:linear-gradient(90deg,#332e40 50%,#ffffff 50%)"></span>턱시도</button>
+      <button class="chip" type="button" id="br-russian" data-breed="russian" aria-pressed="false"><span class="sw" style="background:#8593ad"></span>러시안 블루</button>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="desk" id="desk">
+      <div class="desk-icons"><div class="dicon"><i></i>내 문서</div><div class="dicon"><i></i>사진</div></div>
+      <div class="window"><span></span><span></span><span></span></div>
+      <canvas class="bowl" id="bowl" width="54" height="30" hidden></canvas>
+      <div class="pet" id="pet" role="button" tabindex="0" aria-label="펫 쓰다듬기">
+        <canvas id="pet-canvas" width="144" height="120"></canvas>
+      </div>
+      <div class="zzz" id="zzz" hidden>z Z</div>
+      <div class="taskbar"><span class="app start"></span><span class="app"></span><span class="app"></span><span class="app"></span><span class="clock"></span></div>
+    </div>
+    <div class="row">
+      <div class="controls">
+        <button class="btn primary" type="button" id="feed">밥 주기</button>
+        <button class="btn" type="button" id="pat">쓰다듬기</button>
+        <button class="btn" type="button" id="sleep">재우기</button>
+      </div>
+      <p class="mode">지금: <strong id="mode">걷는 중</strong></p>
+      <div class="stats">
+        <span>배부름</span><span class="bar"><b id="full"></b></span><span class="num" id="full-n"></span>
+        <span>기분</span><span class="bar"><b id="mood"></b></span><span class="num" id="mood-n"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>이전 그림과 비교</h2>
+    <div class="compare">
+      <figure><canvas id="cmp-old" width="192" height="160"></canvas><figcaption><b>이전</b> · 명암 3단계, 자동 계산한 얼굴</figcaption></figure>
+      <figure><canvas id="cmp-new" width="192" height="160"></canvas><figcaption><b>지금</b> · 색조를 바꾼 명암 5단계, 크고 동그란 눈</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>동작 시트</h2>
+    <p class="note">펫 한 마리는 아래 그림 묶음으로 움직입니다. 그림 한 장은 가로 48칸, 세로 40칸이고, 화면에는 3배로 키워서 보여 줍니다.</p>
+    <div class="sheet" id="sheet"></div>
+  </section>
+
+  <section class="card">
+    <h2>이번 예시에서 달라진 점</h2>
+    <div class="spec">
+      <div><b>색조를 바꾼 명암</b><p>명암을 5단계로 늘렸습니다. 그림자는 붉은 보랏빛, 밝은 면은 노르스름하게 넣어 탁하지 않고 따뜻해 보입니다. 머리에는 윤기 하이라이트가 있습니다.</p></div>
+      <div><b>다듬은 윤곽선</b><p>빛 받는 위·왼쪽 외곽선은 연하게, 반대쪽은 진하게 그었습니다. 겹치는 부위 안쪽 선도 검정 대신 털색의 가장 진한 색을 씁니다. 몸 아래 가장자리에는 반사광을 넣었습니다.</p></div>
+      <div><b>살아 있는 움직임</b><p>걷기를 6장으로 늘렸습니다. 걸을 때 머리가 몸보다 한 박자 늦게 움직이고, 귀 끝이 출렁이고, 꼬리가 흔들립니다. 하품 동작도 추가했습니다.</p></div>
+      <div><b>고양이 3종</b><p>큰 삼각 귀, 날씬한 몸, 길게 휘는 꼬리, 수염과 통통한 볼을 넣었습니다. 치즈 태비는 줄무늬와 이마의 M자 무늬, 턱시도는 흰 턱받이와 양말이 있습니다.</p></div>
+    </div>
+    <p class="note">실제 앱에서는 사진을 분석해 털색, 무늬, 귀와 꼬리 모양을 고르고, 이 규격에 맞춰 동작 그림을 만듭니다. 출시 전에는 도트 작가의 손질을 거쳐 품질을 더 끌어올릴 수 있습니다.</p>
+  </section>
+</div>
+
+<script>
+// Pixel dog sprite generator: shapes -> shaded pixels -> outlines -> face details.
+(function (root) {
+  const GW = 48, GH = 40;
+  // material indices
+  const M = { E: 0, F1: 1, F2: 2, F3: 3, C1: 4, C2: 5, C3: 6, I1: 7, I2: 8, L: 9, LC: 10, O: 11, OC: 12, K: 13, H: 14, N: 15, NH: 16, MO: 17, P: 18, B: 19, SH: 20, D3: 21 };
+
+  const BREEDS = {
+    shiba: {
+      name: "시바견", ears: "pointy", tail: "curl", socks: true, brows: true, muzzle: true, belly: true,
+      pal: { F1: "#f7b56a", F2: "#e38a3a", F3: "#b9612a", D3: "#93461d", C1: "#fffaf1", C2: "#f5e3c6", C3: "#d9bd97", I1: "#f6c1b0", I2: "#e39a88",
+             L: "#7a3a17", LC: "#a8876a", O: "#3f1d0c", OC: "#7c5c45", K: "#1d1210", H: "#ffffff", N: "#2a1912", NH: "#7b5a4c", MO: "#6b4a3a", P: "#f0788c", B: "#f59aa8" }
+    },
+    maltese: {
+      name: "몰티즈", ears: "floppy", tail: "plume", socks: false, brows: false, muzzle: true, belly: false,
+      pal: { F1: "#ffffff", F2: "#f3eee7", F3: "#d8cdbf", D3: "#c2b5a5", C1: "#ffffff", C2: "#faf7f2", C3: "#e6ddd0", I1: "#f6d4cf", I2: "#e9b9b1",
+             L: "#b3a291", LC: "#c2b4a5", O: "#6f6157", OC: "#7f7166", K: "#17110f", H: "#ffffff", N: "#231916", NH: "#6b5a52", MO: "#8a776b", P: "#f2879a", B: "#f7aab6" }
+    },
+    blacktan: {
+      name: "블랙탄", ears: "pointy", tail: "curl", socks: true, brows: true, muzzle: true, belly: true,
+      pal: { F1: "#5d5553", F2: "#3b3534", F3: "#262121", D3: "#1a1616", C1: "#f7e2c0", C2: "#e3bf8c", C3: "#c09363", I1: "#d9a99a", I2: "#b98476",
+             L: "#110d0d", LC: "#8d6a47", O: "#0d0a0a", OC: "#5a4029", K: "#0b0808", H: "#ffffff", N: "#0e0a0a", NH: "#4a4140", MO: "#6a4a33", P: "#ef7488", B: "#f29aa8" }
+    }
+  };
+
+  const LIGHT = (() => { const x = -0.55, y = -0.83, l = Math.hypot(x, y); return [x / l, y / l]; })();
+
+  function inEll(x, y, e) {
+    const dx = (x + 0.5 - e.cx) / e.rx, dy = (y + 0.5 - e.cy) / e.ry;
+    return dx * dx + dy * dy <= 1;
+  }
+  function inTri(x, y, p) {
+    const px = x + 0.5, py = y + 0.5;
+    const s = (a, b) => (px - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (py - b[1]);
+    const d1 = s(p[0], p[1]), d2 = s(p[1], p[2]), d3 = s(p[2], p[0]);
+    const neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
+    return !(neg && pos);
+  }
+  function shadeOf(x, y, e) {
+    const nx = (x + 0.5 - e.cx) / e.rx, ny = (y + 0.5 - e.cy) / e.ry;
+    return nx * LIGHT[0] + ny * LIGHT[1];
+  }
+
+  // Build the list of parts for a pose
+  function buildParts(breed, pose, f, opt) {
+    const b = BREEDS[breed];
+    const parts = [];
+    const add = (o) => parts.push(o);
+    let head, body;
+
+    if (pose === "walk") {
+      const bob = [0, -1, 0, -1][f];
+      const A = [-1.6, 0, 1.6, 0][f], Al = [0, 1.2, 0, 0][f];
+      const Bx = [1.6, 0, -1.6, 0][f], Bl = [0, 0, 0, 1.2][f];
+      body = { cx: 19.5, cy: 27 + bob, rx: 11.5, ry: 7.6 };
+      head = { cx: 31, cy: 15.5 + bob, rx: 12, ry: 10.4 };
+      const leg = (cx, cy, lift) => ({ cx, cy: cy - lift, rx: 2.7, ry: 4.3 });
+      tail(b, 9.5 + [0, 0.6, 0, -0.6][f], 18 + bob, add);
+      add({ g: "far", z: 1, shape: leg(12 + Bx, 33.6, Bl), mat: "fur", dark: true, sock: b.socks });
+      add({ g: "far", z: 1, shape: leg(26 + A, 33.6, Al), mat: "fur", dark: true, sock: b.socks });
+      add({ g: "body", z: 2, shape: body, mat: "fur", cream: b.belly ? { cx: 25, cy: 31.5 + bob, rx: 7, ry: 4.6 } : null });
+      add({ g: "near", z: 3, shape: leg(16 + A, 34, Al), mat: "fur", sock: b.socks });
+      add({ g: "near", z: 3, shape: leg(29.5 + Bx, 34, Bl), mat: "fur", sock: b.socks });
+      shadowE = { cx: 21, cy: 38.6, rx: 15, ry: 1.6 };
+    } else if (pose === "sit") {
+      body = { cx: 21, cy: 28.5, rx: 9.2, ry: 8.6 };
+      head = { cx: 30.5, cy: 15 + (f === 1 ? 0.4 : 0), rx: 12, ry: 10.4 };
+      tail(b, 9 + (f === 1 ? -0.7 : 0.4), 25, add);
+      add({ g: "far", z: 1, shape: { cx: 24.5, cy: 34, rx: 2.4, ry: 4.4 }, mat: "fur", dark: true, sock: b.socks });
+      add({ g: "body", z: 2, shape: body, mat: "fur", cream: b.belly ? { cx: 26.5, cy: 27, rx: 4.6, ry: 7 } : null });
+      add({ g: "haunch", z: 2.5, shape: { cx: 15.5, cy: 32, rx: 7, ry: 5.6 }, mat: "fur" });
+      add({ g: "near", z: 3, shape: { cx: 13.5, cy: 37, rx: 4.4, ry: 1.9 }, mat: "fur", sock: b.socks, sockRows: 2 });
+      add({ g: "near2", z: 3.2, shape: { cx: 28.6, cy: 34, rx: 2.5, ry: 4.6 }, mat: "fur", sock: b.socks });
+      shadowE = { cx: 21, cy: 38.6, rx: 13, ry: 1.6 };
+    } else { // sleep
+      const br = f === 1 ? 0.5 : 0;
+      body = { cx: 22, cy: 33 - br / 2, rx: 12.5, ry: 5.6 + br };
+      head = { cx: 32.5, cy: 28.5, rx: 11.6, ry: 9.4 };
+      tail(b, 13, 30.5 - br / 2, add, true);
+      add({ g: "body", z: 2, shape: body, mat: "fur", cream: null });
+      opt.pawsFront = { cx: 39.5, cy: 37.2, rx: 4.2, ry: 1.8 };
+      shadowE = { cx: 23, cy: 38.8, rx: 17, ry: 1.5 };
+    }
+
+    // ears + head
+    const hx = head.cx, hy = head.cy;
+    if (b.ears === "pointy") {
+      const far = [[hx - 10.5, hy - 4], [hx - 8, hy - 15], [hx - 2, hy - 8]];
+      const near = [[hx + 3, hy - 8.5], [hx + 9.5, hy - 15], [hx + 11.5, hy - 3.5]];
+      add({ g: "ear", z: 4, tri: far, mat: "fur", shadeE: { cx: hx - 7, cy: hy - 9, rx: 5, ry: 6 }, inner: [[hx - 8.6, hy - 6], [hx - 7.6, hy - 12.2], [hx - 4.2, hy - 8]] });
+      add({ g: "ear2", z: 4, tri: near, mat: "fur", shadeE: { cx: hx + 8, cy: hy - 9, rx: 5, ry: 6 }, inner: [[hx + 5.4, hy - 8.4], [hx + 9.2, hy - 12.4], [hx + 9.8, hy - 5.6]] });
+    }
+    add({ g: "head", z: 5, shape: head, mat: "fur",
+          cream: b.muzzle ? { cx: hx + 3.6, cy: hy + 5.4, rx: 8, ry: 5 } : null,
+          cream2: b.brows ? [{ x: hx - 4, y: hy - 4 }, { x: hx - 3, y: hy - 4 }, { x: hx + 6, y: hy - 4 }, { x: hx + 7, y: hy - 4 }] : null });
+    if (b.ears === "floppy") {
+      // 늘어진 귀는 머리 뒤에 두어 얼굴(눈, 볼)을 가리지 않게 한다
+      add({ g: "ear", z: 4.5, shape: { cx: hx - 11.4, cy: hy + 2.5, rx: 3.6, ry: 7.4 }, mat: "fur", dark: true });
+      add({ g: "ear2", z: 4.6, shape: { cx: hx + 11.9, cy: hy + 2.5, rx: 3.5, ry: 7.4 }, mat: "fur" });
+    }
+    if (opt.pawsFront) add({ g: "paw", z: 7, shape: opt.pawsFront, mat: "fur", sock: b.socks, sockRows: 2 });
+    return { parts, head, shadowE };
+  }
+  let shadowE = null;
+
+  function tail(b, cx, cy, add, sleeping) {
+    if (b.tail === "curl") {
+      add({ g: "tail", z: sleeping ? 2.6 : 0, shape: { cx, cy, rx: 4.8, ry: 4.6 }, mat: "fur", cream: { cx: cx + 0.8, cy: cy + 0.9, rx: 2.2, ry: 2.1 } });
+    } else {
+      add({ g: "tail", z: sleeping ? 2.6 : 0, shape: sleeping ? { cx, cy: cy + 1, rx: 5.5, ry: 3.4 } : { cx, cy: cy - 1, rx: 3.8, ry: 5.6 }, mat: "fur" });
+    }
+  }
+
+  function render(breed, pose, f, flags) {
+    flags = flags || {};
+    const opt = {};
+    const { parts, head } = buildParts(breed, pose, f, opt);
+    const b = BREEDS[breed];
+    const id = new Int16Array(GW * GH).fill(-1);
+    const mat = new Uint8Array(GW * GH);
+    parts.sort((a, c) => a.z - c.z);
+    parts.forEach((p, i) => {
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        const inside = p.tri ? inTri(x, y, p.tri) : inEll(x, y, p.shape);
+        if (!inside) continue;
+        const k = y * GW + x;
+        id[k] = i;
+        const se = p.shadeE || p.shape;
+        const v = shadeOf(x, y, se);
+        let cream = (p.cream && inEll(x, y, p.cream)) || false;
+        if (p.sock) {
+          const bottom = Math.floor(p.shape.cy + p.shape.ry - 0.01);
+          if (y > bottom - (p.sockRows || 2)) cream = true;
+        }
+        let tone = v > 0.42 ? 1 : v < -0.38 ? 3 : 2;
+        if (p.dark) tone = Math.min(3, tone + 1);
+        if (p.tri && p.inner && inTri(x, y, p.inner)) { mat[k] = tone <= 2 ? M.I1 : M.I2; continue; }
+        if (cream) mat[k] = [0, M.C1, M.C2, M.C3][tone];
+        else mat[k] = [0, M.F1, M.F2, M.F3][tone];
+      }
+      if (p.cream2) p.cream2.forEach(pt => { const x = Math.round(pt.x), y = Math.round(pt.y); const k = y * GW + x; if (id[k] === i) mat[k] = M.C2; });
+    });
+
+    const isCream = m => m === M.C1 || m === M.C2 || m === M.C3 || m === M.I1 || m === M.I2;
+    const groupOf = i => parts[i].g;
+    // cast shadow under head / between parts, and inner contour lines
+    const out = mat.slice();
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const k = y * GW + x; const i = id[k]; if (i < 0) continue;
+      const p = parts[i];
+      // contour: a neighbour belongs to a part drawn in front, from another group
+      let line = false;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const j = id[ny * GW + nx];
+        if (j >= 0 && j !== i && parts[j].z > p.z && groupOf(j) !== p.g) { line = true; break; }
+      }
+      if (line) { out[k] = isCream(mat[k]) ? M.LC : M.L; continue; }
+      // soft cast shadow below parts in front
+      for (const [dx, dy] of [[0, -1], [0, -2], [-1, -1]]) {
+        const nx = x + dx, ny = y + dy; if (ny < 0 || nx < 0) continue;
+        const j = id[ny * GW + nx];
+        if (j >= 0 && parts[j].z > p.z && groupOf(j) !== p.g) {
+          out[k] = isCream(mat[k]) ? M.C3 : (mat[k] === M.F3 ? M.D3 : M.F3);
+          break;
+        }
+      }
+    }
+    // outer outline
+    const final = out.slice();
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const k = y * GW + x; if (id[k] >= 0) continue;
+      let nb = -1;
+      for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const kk = ny * GW + nx; if (id[kk] >= 0) { nb = kk; break; }
+      }
+      if (nb >= 0) final[k] = isCream(out[nb]) ? M.OC : M.O;
+    }
+
+    // face details relative to the head center
+    const hx = Math.round(head.cx), hy = Math.round(head.cy);
+    const put = (x, y, m) => { if (x >= 0 && y >= 0 && x < GW && y < GH) final[y * GW + x] = m; };
+    const eyes = [[hx - 4, hy - 1], [hx + 6, hy - 1]];
+    const closed = pose === "sleep" || flags.blink;
+    eyes.forEach(([ex, ey]) => {
+      if (closed) { put(ex - 1, ey + 1, M.K); put(ex, ey + 2, M.K); put(ex + 1, ey + 2, M.K); put(ex + 2, ey + 1, M.K); }
+      else if (flags.happy) { put(ex - 1, ey + 2, M.K); put(ex, ey + 1, M.K); put(ex + 1, ey + 1, M.K); put(ex + 2, ey + 2, M.K); }
+      else {
+        for (let dy = 0; dy < 4; dy++) for (let dx = 0; dx < 2; dx++) put(ex + dx, ey + dy, M.K);
+        put(ex, ey, M.H); put(ex + 1, ey + 2, M.NH);
+      }
+    });
+    // nose
+    put(hx + 2, hy + 3, M.N); put(hx + 3, hy + 3, M.NH); put(hx + 4, hy + 3, M.N);
+    put(hx + 2, hy + 4, M.N); put(hx + 3, hy + 4, M.N); put(hx + 4, hy + 4, M.N); put(hx + 3, hy + 5, M.N);
+    // mouth (omega shape)
+    put(hx + 1, hy + 6, M.MO); put(hx + 2, hy + 7, M.MO); put(hx + 3, hy + 6, M.MO); put(hx + 4, hy + 7, M.MO); put(hx + 5, hy + 6, M.MO);
+    if (flags.happy && pose !== "sleep") { put(hx + 2, hy + 8, M.P); put(hx + 3, hy + 8, M.P); put(hx + 4, hy + 8, M.P); put(hx + 3, hy + 9, M.P); put(hx + 2, hy + 9, M.P); }
+    // blush
+    if (pose !== "sleep" || true) { put(hx - 8, hy + 3, M.B); put(hx - 7, hy + 3, M.B); put(hx + 9, hy + 3, M.B); put(hx + 10, hy + 3, M.B); }
+
+    return { px: final, shadow: shadowE, pal: b.pal };
+  }
+
+  const ORDER = ["E", "F1", "F2", "F3", "C1", "C2", "C3", "I1", "I2", "L", "LC", "O", "OC", "K", "H", "N", "NH", "MO", "P", "B", "SH", "D3"];
+  function draw(ctx, breed, pose, f, flags, scale, ox, oy) {
+    const r = render(breed, pose, f, flags);
+    const s = scale; ox = ox || 0; oy = oy || 0;
+    // ground shadow
+    ctx.fillStyle = "rgba(20,14,10,0.18)";
+    const e = r.shadow;
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (inEll(x, y, e)) ctx.fillRect(ox + x * s, oy + y * s, s, s);
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const m = r.px[y * GW + x]; if (!m) continue;
+      ctx.fillStyle = r.pal[ORDER[m]];
+      ctx.fillRect(ox + x * s, oy + y * s, s, s);
+    }
+  }
+  root.PixelDog = { draw, render, BREEDS, GW, GH };
+})(typeof window !== "undefined" ? window : globalThis);
+
+// Pixel pet sprite generator v2: dogs + cats, hue-shifted 5-tone ramps, selective outlines,
+// hand-placed faces, secondary motion (ear lag, tail sway), fluffy edges.
+(function (root) {
+  const GW = 48, GH = 40;
+  const LIGHT = (() => { const x = -0.55, y = -0.83, l = Math.hypot(x, y); return [x / l, y / l]; })();
+
+  const COMMON = { K: "#1b1214", H: "#ffffff", S: "#d9e6ff", P: "#f07a8c", PD: "#7c2a3a", B: "#f6a0ae" };
+  const BREEDS = {
+    shiba: {
+      name: "시바견", species: "dog", ears: "pointy", tail: "curl", socks: true, brows: true, muzzle: true, belly: true,
+      pal: { F0: "#ffe3a8", F1: "#f9b96d", F2: "#e48b3c", F3: "#bf5f3a", F4: "#853b35",
+             C0: "#ffffff", C1: "#fff7ea", C2: "#f3dfc6", C3: "#d4b39d", C4: "#a3807a",
+             I1: "#f8c9bb", I2: "#df9893", O: "#371a1d", OL: "#6d3530", OC: "#6a4c49", OCL: "#9c7b6e",
+             IR: "#8a4f33", N: "#2a1a1c", NH: "#8a6a6e", MO: "#6b4038" }
+    },
+    maltese: {
+      name: "몰티즈", species: "dog", ears: "floppy", tail: "plume", socks: false, brows: false, muzzle: false, belly: false, fluffy: true,
+      pal: { F0: "#ffffff", F1: "#ffffff", F2: "#f5f1ec", F3: "#ddd4d3", F4: "#b4a8b0",
+             C0: "#ffffff", C1: "#ffffff", C2: "#f5f1ec", C3: "#ddd4d3", C4: "#b4a8b0",
+             I1: "#f6d2cf", I2: "#e6b4b3", O: "#5e5260", OL: "#8f8290", OC: "#5e5260", OCL: "#8f8290",
+             IR: "#6a4a42", N: "#241a1e", NH: "#7a6670", MO: "#8a7480" }
+    },
+    blacktan: {
+      name: "블랙탄", species: "dog", ears: "pointy", tail: "curl", socks: true, brows: true, muzzle: true, belly: true,
+      pal: { F0: "#9a8fa6", F1: "#6b6174", F2: "#443b4a", F3: "#2c2433", F4: "#1b1422",
+             C0: "#ffeccd", C1: "#f3cf98", C2: "#d9a86b", C3: "#ad7a4f", C4: "#77503a",
+             I1: "#d6a39b", I2: "#a87a78", O: "#0f0a14", OL: "#1f1726", OC: "#55392a", OCL: "#77503a",
+             IR: "#7a5238", N: "#120c12", NH: "#5c5260", MO: "#5e3d2c" }
+    },
+    cheese: {
+      name: "치즈 태비", species: "cat", ears: "cat", tail: "cat", socks: false, muzzle: true, belly: true, stripes: true,
+      pal: { F0: "#ffe5b0", F1: "#fcc684", F2: "#eea158", F3: "#cd7444", F4: "#934a3d",
+             C0: "#ffffff", C1: "#fff8ec", C2: "#f4e3cc", C3: "#d9bda4", C4: "#a98b80",
+             I1: "#f9c6c4", I2: "#e3999c", O: "#3c1d1f", OL: "#7b4237", OC: "#6c4f4b", OCL: "#a3857a",
+             IR: "#f4b63e", IR2: "#c47d22", Q: "#e9858e", MO: "#6b4038", WH: "#fff8ec" }
+    },
+    tuxedo: {
+      name: "턱시도", species: "cat", ears: "cat", tail: "cat", socks: true, muzzle: true, belly: true, chest: true, bigMuzzle: true,
+      pal: { F0: "#77718a", F1: "#524c62", F2: "#332e40", F3: "#221e2c", F4: "#15121d",
+             C0: "#ffffff", C1: "#fbfbff", C2: "#e9e8f3", C3: "#c8c6d8", C4: "#9895ad",
+             I1: "#e6a9b6", I2: "#b77d8c", O: "#0b0910", OL: "#1b1824", OC: "#5f5c75", OCL: "#8a87a0",
+             IR: "#dcd84f", IR2: "#a7a22c", Q: "#f1a1ad", MO: "#6b5868", WH: "#ffffff" }
+    },
+    russian: {
+      name: "러시안 블루", species: "cat", ears: "cat", tail: "cat", socks: false, muzzle: false, belly: false,
+      pal: { F0: "#dbe3f1", F1: "#adb9cf", F2: "#8593ad", F3: "#64708e", F4: "#454d6c",
+             C0: "#dbe3f1", C1: "#adb9cf", C2: "#8593ad", C3: "#64708e", C4: "#454d6c",
+             I1: "#c9a7b8", I2: "#9f8299", O: "#232740", OL: "#3f4768", OC: "#232740", OCL: "#3f4768",
+             IR: "#86d96f", IR2: "#4fa648", Q: "#7a6f8c", MO: "#343a58", WH: "#eef2fa" }
+    }
+  };
+
+  // 고양이 눈: 크고 동그란 검은 눈 + 큰 반짝임 2칸 + 아래쪽에 살짝 비치는 홍채색
+  const CFG = { catEyeX: [-7, 1], catEyeY: -3, catEye: [".KKK.", "KHHKK", "KHHKK", "KKKKK", "KIISK", ".KKK."], catNoseDy: 1 };
+
+  /* ---------- shapes ---------- */
+  function ellIn(x, y, e) {
+    const dx = (x + 0.5 - e.cx) / e.rx, dy = (y + 0.5 - e.cy) / e.ry;
+    const d = dx * dx + dy * dy;
+    if (e.fluff) { const a = Math.atan2(dy, dx); const k = 1 + e.fluff * Math.sin(a * (e.lobes || 9) + (e.ph || 0)); return d <= k * k; }
+    return d <= 1;
+  }
+  function triIn(x, y, p) {
+    const px = x + 0.5, py = y + 0.5;
+    const s = (a, b) => (px - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (py - b[1]);
+    const d1 = s(p[0], p[1]), d2 = s(p[1], p[2]), d3 = s(p[2], p[0]);
+    return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+  }
+  function nearestCircle(x, y, c) {
+    let bi = 0, bd = 1e9;
+    c.forEach((k, i) => { const d = Math.hypot(x + 0.5 - k.x, y + 0.5 - k.y) / k.r; if (d < bd) { bd = d; bi = i; } });
+    return bi;
+  }
+  function inside(x, y, s) {
+    if (s.t === "tri") return triIn(x, y, s.p);
+    if (s.t === "chain") return s.c.some(k => (x + 0.5 - k.x) ** 2 + (y + 0.5 - k.y) ** 2 <= k.r * k.r);
+    return ellIn(x, y, s);
+  }
+  function normal(x, y, s) {
+    if (s.t === "chain") { const k = s.c[nearestCircle(x, y, s.c)]; return [(x + 0.5 - k.x) / k.r, (y + 0.5 - k.y) / k.r]; }
+    const e = s.t === "tri" ? s.se : s;
+    return [(x + 0.5 - e.cx) / e.rx, (y + 0.5 - e.cy) / e.ry];
+  }
+
+  /* ---------- pose building ---------- */
+  function walkPhase(f) {
+    const ph = f / 6 * Math.PI * 2;
+    const bobOf = k => (Math.cos(2 * (k / 6 * Math.PI * 2)) > 0.3 ? 0 : -1);
+    const bob = bobOf(f), hb = bobOf((f + 5) % 6), hbPrev = bobOf((f + 4) % 6);
+    return {
+      bob, hb, earTip: -(hb - hbPrev),
+      Adx: 1.8 * Math.cos(ph), Al: Math.max(0, Math.sin(ph)) * 1.4,
+      Bdx: -1.8 * Math.cos(ph), Bl: Math.max(0, -Math.sin(ph)) * 1.4,
+      sway: Math.sin(ph)
+    };
+  }
+
+  function headParts(B, hx, hy, add, o) {
+    const dog = B.species === "dog";
+    const head = dog ? { cx: hx, cy: hy, rx: 12, ry: 10.4 } : { cx: hx, cy: hy, rx: 11.4, ry: 9.4 };
+    if (B.fluffy) { head.fluff = 0.035; head.lobes = 13; }
+    const td = o.earTip || 0;
+    const inset = (tri, k) => {
+      const c = [(tri[0][0] + tri[1][0] + tri[2][0]) / 3, (tri[0][1] + tri[1][1] + tri[2][1]) / 3];
+      return tri.map(p => [c[0] + (p[0] - c[0]) * k, c[1] + (p[1] - c[1]) * k + 0.9]);
+    };
+    if (B.ears === "pointy" || B.ears === "cat") {
+      const cat = B.ears === "cat";
+      const far = cat ? [[hx - 11, hy - 2.5], [hx - 9.5, hy - 16 + td], [hx - 2.5, hy - 7.5]] : [[hx - 10.5, hy - 4], [hx - 8, hy - 15 + td], [hx - 2, hy - 8]];
+      const near = cat ? [[hx + 2.5, hy - 7.5], [hx + 9.2, hy - 16.5 + td], [hx + 11.6, hy - 2.5]] : [[hx + 3, hy - 8.5], [hx + 9.5, hy - 15 + td], [hx + 11.5, hy - 3.5]];
+      add({ g: "earF", z: 4, s: { t: "tri", p: far, se: { cx: hx - 7, cy: hy - 9, rx: 5, ry: 6 } }, inner: inset(far, 0.5), dark: true });
+      add({ g: "earN", z: 4.1, s: { t: "tri", p: near, se: { cx: hx + 8, cy: hy - 9, rx: 5, ry: 6 } }, inner: inset(near, 0.5) });
+    } else {
+      add({ g: "earF", z: 4.5, s: { cx: hx - 11.4, cy: hy + 2.5 + td * 0.6, rx: 3.6, ry: 7.4, fluff: 0.08, lobes: 7 }, dark: true });
+      add({ g: "earN", z: 4.6, s: { cx: hx + 11.9, cy: hy + 2.5 + td * 0.6, rx: 3.5, ry: 7.4, fluff: 0.08, lobes: 7, ph: 1 } });
+    }
+    const cream = [];
+    if (B.muzzle) {
+      if (dog) cream.push({ cx: hx + 2, cy: hy + 4.6, rx: 7.6, ry: 4.9 });
+      else if (B.bigMuzzle) cream.push({ cx: hx + 0.5, cy: hy + 4.6, rx: 8.8, ry: 5.4 }, { cx: hx + 0.5, cy: hy - 3, rx: 1.4, ry: 6 });
+      else cream.push({ cx: hx + 0.5, cy: hy + 5, rx: 7, ry: 4.2 });
+    }
+    add({ g: "head", z: 5, s: head, spec: true, rim: true, cream, stripeHead: B.stripes });
+    if (!dog) {
+      add({ g: "head", z: 5, s: { cx: hx - 8.6, cy: hy + 4, rx: 4.2, ry: 3.6, fluff: 0.12, lobes: 5 }, cream, rim: true });
+      add({ g: "head", z: 5, s: { cx: hx + 9.2, cy: hy + 4, rx: 4.2, ry: 3.6, fluff: 0.12, lobes: 5, ph: 2 }, cream, rim: true });
+    }
+    return head;
+  }
+
+  function catTail(x0, y0, fn, n, z, B) {
+    const c = [];
+    for (let i = 0; i <= n; i++) { const t = i / n; const p = fn(t); c.push({ x: p[0], y: p[1], r: p[2] }); }
+    return { g: "tail", z, s: { t: "chain", c }, rings: B.stripes };
+  }
+
+  function build(B, pose, f, flags) {
+    const P = [];
+    const add = o => P.push(o);
+    const dog = B.species === "dog";
+    let head, shadow;
+    const leg = (cx, cy, rx, ry) => ({ cx, cy, rx, ry });
+
+    if (pose === "walk") {
+      const w = walkPhase(f);
+      if (dog) {
+        if (B.tail === "curl") add({ g: "tail", z: 0, s: { cx: 9.5 + w.sway * 0.8, cy: 18 + w.bob, rx: 4.8, ry: 4.6 }, cream: [{ cx: 10.3 + w.sway * 0.8, cy: 18.9 + w.bob, rx: 2.2, ry: 2.1 }] });
+        else add({ g: "tail", z: 0, s: { cx: 9.5 + w.sway, cy: 17 + w.bob, rx: 3.9, ry: 5.6, fluff: 0.13, lobes: 7 } });
+        add({ g: "legF", z: 1, s: leg(12 + w.Bdx, 33.6 - w.Bl, 2.7, 4.3), dark: true, sock: B.socks });
+        add({ g: "legF", z: 1, s: leg(26 + w.Adx, 33.6 - w.Al, 2.7, 4.3), dark: true, sock: B.socks });
+        add({ g: "body", z: 2, s: { cx: 19.5, cy: 27 + w.bob, rx: 11.5, ry: 7.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 25, cy: 31.5 + w.bob, rx: 7, ry: 4.6 }] : [] });
+        add({ g: "legN", z: 3, s: leg(16 + w.Adx, 34 - w.Al, 2.7, 4.3), sock: B.socks });
+        add({ g: "legN2", z: 3.1, s: leg(29.5 + w.Bdx, 34 - w.Bl, 2.7, 4.3), sock: B.socks });
+        head = headParts(B, 31, 15.5 + w.hb, add, { earTip: w.earTip });
+        shadow = { cx: 21, cy: 38.6, rx: 15, ry: 1.6 };
+      } else {
+        add(catTail(0, 0, t => [9 - 3.5 * t + (3 + 2.6 * w.sway) * t * t, 24 + w.bob - 15 * t, 2.4 - 0.6 * t], 10, 0, B));
+        add({ g: "legF", z: 1, s: leg(12 + w.Bdx, 33.4 - w.Bl, 2.2, 5), dark: true, sock: B.socks, stripes: B.stripes });
+        add({ g: "legF", z: 1, s: leg(25.5 + w.Adx, 33.4 - w.Al, 2.2, 5), dark: true, sock: B.socks, stripes: B.stripes });
+        add({ g: "body", z: 2, s: { cx: 19, cy: 27.5 + w.bob, rx: 11, ry: 6.4 }, rim: true, stripes: B.stripes,
+              cream: B.belly ? [{ cx: 23, cy: 32 + w.bob, rx: 7.5, ry: B.chest ? 5 : 3.6 }] : [] });
+        add({ g: "legN", z: 3, s: leg(15.5 + w.Adx, 33.8 - w.Al, 2.2, 5), sock: B.socks, stripes: B.stripes });
+        add({ g: "legN2", z: 3.1, s: leg(28.5 + w.Bdx, 33.8 - w.Bl, 2.2, 5), sock: B.socks, stripes: B.stripes });
+        head = headParts(B, 31, 16 + w.hb, add, { earTip: w.earTip });
+        shadow = { cx: 20, cy: 38.6, rx: 14, ry: 1.5 };
+      }
+    } else if (pose === "sit") {
+      const sway = f === 1 ? 0.7 : -0.5;
+      if (dog) {
+        if (B.tail === "curl") add({ g: "tail", z: 0, s: { cx: 9 + sway, cy: 25, rx: 4.8, ry: 4.6 }, cream: [{ cx: 9.8 + sway, cy: 25.9, rx: 2.2, ry: 2.1 }] });
+        else add({ g: "tail", z: 0, s: { cx: 8.5 + sway, cy: 25, rx: 3.9, ry: 5.6, fluff: 0.13, lobes: 7 } });
+        add({ g: "legF", z: 1, s: leg(24.5, 34, 2.4, 4.4), dark: true, sock: B.socks });
+        add({ g: "body", z: 2, s: { cx: 21, cy: 28.5, rx: 9.2, ry: 8.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 26.5, cy: 27, rx: 4.6, ry: 7 }] : [] });
+        add({ g: "haunch", z: 2.5, s: { cx: 15.5, cy: 32, rx: 7, ry: 5.6, fluff: B.fluffy ? 0.05 : 0, lobes: 9 }, rim: true });
+        add({ g: "foot", z: 3, s: { cx: 13.5, cy: 37, rx: 4.4, ry: 1.9 }, sock: B.socks, sockRows: 2 });
+        add({ g: "legN", z: 3.2, s: leg(28.6, 34, 2.5, 4.6), sock: B.socks });
+        head = headParts(B, 30.5, 15 + (flags.yawn ? -0.6 : 0), add, { earTip: flags.yawn ? 1 : 0 });
+        shadow = { cx: 21, cy: 38.6, rx: 13, ry: 1.6 };
+      } else {
+        add({ g: "legF", z: 1, s: leg(24.2, 34, 2.1, 4.6), dark: true, sock: B.socks, stripes: B.stripes });
+        add({ g: "body", z: 2, s: { cx: 21, cy: 29, rx: 8.2, ry: 8.4 }, rim: true, stripes: B.stripes, cream: B.belly ? [{ cx: 26, cy: 28, rx: 4.2, ry: B.chest ? 8 : 6.5 }] : [] });
+        add({ g: "haunch", z: 2.5, s: { cx: 15.5, cy: 32.6, rx: 6.4, ry: 5.4 }, rim: true, stripes: B.stripes });
+        add(catTail(0, 0, t => [12.5 - 7.5 * t, 37 - 9.5 * t * t * (1 + 0.15 * sway), 2.2 - 0.5 * t], 10, 2.7, B));
+        add({ g: "foot", z: 3, s: { cx: 13, cy: 37.2, rx: 4, ry: 1.7 }, sock: B.socks, sockRows: 2 });
+        add({ g: "legN", z: 3.2, s: leg(27.6, 34, 2.1, 4.6), sock: B.socks, stripes: B.stripes });
+        head = headParts(B, 29.5, 15.5 + (flags.yawn ? -0.6 : 0), add, { earTip: flags.yawn ? 1 : 0 });
+        shadow = { cx: 20, cy: 38.6, rx: 12, ry: 1.5 };
+      }
+    } else { // sleep
+      const br = f === 1 ? 0.5 : 0;
+      if (dog) {
+        add({ g: "body", z: 2, s: { cx: 22, cy: 33 - br / 2, rx: 12.5, ry: 5.6 + br, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true });
+        if (B.tail === "curl") add({ g: "tail", z: 2.6, s: { cx: 13, cy: 30.5 - br / 2, rx: 4.8, ry: 4.6 }, cream: [{ cx: 13.8, cy: 31.4 - br / 2, rx: 2.2, ry: 2.1 }] });
+        else add({ g: "tail", z: 2.6, s: { cx: 13, cy: 31.5 - br / 2, rx: 5.5, ry: 3.4, fluff: 0.13, lobes: 7 } });
+        head = headParts(B, 32.5, 28.5, add, { earTip: 1 });
+        add({ g: "paw", z: 7, s: { cx: 39.5, cy: 37.2, rx: 4.2, ry: 1.8 }, sock: B.socks, sockRows: 2 });
+        shadow = { cx: 23, cy: 38.8, rx: 17, ry: 1.5 };
+      } else {
+        add({ g: "body", z: 2, s: { cx: 21, cy: 33.2 - br / 2, rx: 12.5, ry: 5.6 + br }, rim: true, stripes: B.stripes });
+        add(catTail(0, 0, t => [9 + 17 * t, 35.6 + 1.8 * t, 2.1 - 0.3 * t], 12, 2.6, B));
+        head = headParts(B, 31.5, 29.5, add, { earTip: 1 });
+        add({ g: "paw", z: 7, s: { cx: 38.5, cy: 37.4, rx: 3.6, ry: 1.6 }, sock: B.socks, sockRows: 2 });
+        shadow = { cx: 23, cy: 38.8, rx: 16, ry: 1.5 };
+      }
+    }
+    return { parts: P, head, shadow };
+  }
+
+  /* ---------- render ---------- */
+  function render(key, pose, f, flags) {
+    flags = flags || {};
+    const B = BREEDS[key];
+    const { parts, head, shadow } = build(B, pose, f, flags);
+    parts.forEach((p, i) => { p._o = i; });
+    parts.sort((a, b) => a.z - b.z || a._o - b._o);
+    const N = GW * GH;
+    const id = new Int16Array(N).fill(-1);
+    const ramp = new Array(N).fill(null);
+    const tone = new Int8Array(N);
+    const vv = new Float32Array(N);
+
+    parts.forEach((p, i) => {
+      for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+        if (!inside(x, y, p.s)) continue;
+        const k = y * GW + x;
+        id[k] = i;
+        const [nx, ny] = normal(x, y, p.s);
+        const v = nx * LIGHT[0] + ny * LIGHT[1];
+        const r = Math.hypot(nx, ny);
+        vv[k] = v;
+        let t = v > 0.5 ? 1 : v > -0.28 ? 2 : 3;
+        if (p.spec && v > 0.6 && r > 0.42 && r < 0.82) t = 0;
+        if (p.dark) t = Math.min(4, t + 1);
+        let rp = "F";
+        if (p.inner && triIn(x, y, p.inner)) { rp = "I"; t = t <= 2 ? 1 : 2; }
+        else {
+          if (p.cream && p.cream.some(c => ellIn(x, y, c))) rp = "C";
+          if (p.sock) {
+            const bottom = Math.floor(p.s.cy + p.s.ry - 0.01);
+            if (y > bottom - (p.sockRows || 2)) rp = "C";
+          }
+          if (rp === "F") {
+            let stripe = false;
+            if (p.stripes && p.g === "body" || p.stripes && p.g === "haunch") stripe = ((x * 0.85 - y * 0.5) % 4.4 + 4.4) % 4.4 < 1.15 && y < p.s.cy + p.s.ry * 0.55;
+            else if (p.stripes) stripe = y % 3 === 0;
+            if (p.rings) stripe = nearestCircle(x, y, p.s.c) % 3 === 2;
+            if (stripe) t = Math.min(4, t + 1);
+          }
+        }
+        if (rp === "C" && t > 1) t -= 1; // 흰 털은 한 단계 밝게: 칙칙해 보이지 않도록
+        ramp[k] = rp; tone[k] = t;
+      }
+    });
+
+    // contour lines, cast shadow, rim light
+    const r2 = ramp.slice(), t2 = Int8Array.from(tone);
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const k = y * GW + x, i = id[k];
+      if (i < 0) continue;
+      const p = parts[i];
+      let line = false;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const j = id[ny * GW + nx];
+        if (j >= 0 && j !== i && parts[j].z > p.z && parts[j].g !== p.g) { line = true; break; }
+      }
+      if (line) { t2[k] = 4; if (r2[k] === "I") r2[k] = "F"; continue; }
+      let cast = false;
+      for (const [dx, dy] of [[0, -1], [0, -2], [-1, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0) continue;
+        const j = id[ny * GW + nx];
+        if (j >= 0 && parts[j].z > p.z && parts[j].g !== p.g) { cast = true; break; }
+      }
+      if (cast && r2[k] !== "I") { t2[k] = tone[k] >= 3 ? 4 : 3; continue; }
+      if (p.rim && vv[k] < -0.62) {
+        const below = y + 1 < GH ? id[(y + 1) * GW + x] : -1, right = x + 1 < GW ? id[y * GW + x + 1] : -1;
+        if ((below < 0 || right < 0) && tone[k] === 3) t2[k] = 2;
+      }
+    }
+
+    // outline: lighter on the lit (top/left) side
+    const px = new Array(N).fill(null);
+    for (let k = 0; k < N; k++) if (id[k] >= 0) px[k] = r2[k] === "I" ? "I" + t2[k] : r2[k] + t2[k];
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const k = y * GW + x;
+      if (id[k] >= 0) continue;
+      let nb = -1, lit = false;
+      for (const [dx, dy, l] of [[0, 1, true], [1, 0, true], [0, -1, false], [-1, 0, false]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+        const kk = ny * GW + nx;
+        if (id[kk] >= 0) { if (nb < 0) { nb = kk; lit = l; } }
+      }
+      if (nb >= 0) {
+        const cream = r2[nb] === "C" || r2[nb] === "I";
+        px[k] = cream ? (lit ? "OCL" : "OC") : (lit ? "OL" : "O");
+      }
+    }
+
+    // face
+    const hx = Math.round(head.cx), hy = Math.round(head.cy);
+    const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < GW && y < GH) px[y * GW + x] = c; };
+    const stamp = (x0, y0, rows) => rows.forEach((r, dy) => [...r].forEach((ch, dx) => {
+      if (ch === ".") return;
+      const map = { K: "K", H: "H", S: "S", I: "IR", J: "IR2", N: "N", n: "NH", Q: "Q", P: "P", D: "PD" };
+      put(x0 + dx, y0 + dy, map[ch]);
+    }));
+    const dog = B.species === "dog";
+    const closed = pose === "sleep" || flags.blink;
+    // 강아지와 고양이 모두 크고 동그란 눈(5x6)을 쓴다
+    const eyesX = dog ? [hx - 6, hx + 4] : CFG.catEyeX.map(d => hx + d);
+    const ey = hy + CFG.catEyeY;
+    eyesX.forEach((ex, idx) => {
+      if (flags.yawn) {
+        const o = 1;
+        if (idx === 0) stamp(ex + o, ey + o, ["KK..", "..KK", "KK.."]); else stamp(ex, ey + o, ["..KK", "KK..", "..KK"]);
+        stamp(ex, ey, []);
+      } else if (closed) stamp(ex, ey + 2, ["K...K", ".KKK."]);
+      else if (flags.happy) stamp(ex, ey + 2, [".KKK.", "K...K"]);
+      else stamp(ex, ey, CFG.catEye);
+    });
+    if (dog && B.brows) eyesX.forEach(ex => { put(ex + 1, ey - 2, "C1"); put(ex + 2, ey - 2, "C1"); put(ex + 3, ey - 2, "C1"); });
+    if (!dog && B.stripes) {
+      [[hx - 2, hy - 7], [hx - 2, hy - 6], [hx, hy - 8], [hx, hy - 7], [hx, hy - 6], [hx + 2, hy - 7], [hx + 2, hy - 6],
+       [hx - 10, hy + 2], [hx - 11, hy + 3], [hx + 10, hy + 2], [hx + 11, hy + 3]].forEach(([x, y]) => { if (px[y * GW + x] && px[y * GW + x][0] === "F") put(x, y, "F3"); });
+    }
+    const cx = dog ? hx + 1 : hx - 1, ny = hy + 2 + CFG.catNoseDy;
+    if (dog) stamp(cx - 1, ny, ["NnN", "NNN", ".N."]);
+    else stamp(cx - 1, ny, ["QQQ", ".Q."]);
+    const my = dog ? ny + 3 : ny + 2;
+    if (flags.yawn) stamp(cx - 1, my, ["DDD", "DPD", ".D."]);
+    else {
+      [[cx - 2, my], [cx - 1, my + 1], [cx, my], [cx + 1, my + 1], [cx + 2, my]].forEach(([x, y]) => put(x, y, "MO"));
+      if (flags.happy && pose !== "sleep") { put(cx - 1, my + 2, "P"); put(cx, my + 2, "P"); put(cx + 1, my + 2, "P"); put(cx, my + 3, "P"); }
+    }
+    const blush = dog ? [hx - 9, hx + 10] : [hx - 8, hx + 6];
+    blush.forEach(bx => { put(bx, hy + 2, "B"); put(bx + 1, hy + 2, "B"); });
+    if (!dog) {
+      const wy = hy + 3;
+      [[hx - 10, wy], [hx - 11, wy], [hx - 12, wy], [hx - 13, wy - 1], [hx - 10, wy + 2], [hx - 11, wy + 2], [hx - 12, wy + 3], [hx - 13, wy + 3],
+       [hx + 9, wy], [hx + 10, wy], [hx + 11, wy], [hx + 12, wy - 1], [hx + 9, wy + 2], [hx + 10, wy + 2], [hx + 11, wy + 3], [hx + 12, wy + 3]]
+        .forEach(([x, y]) => put(x, y, "WH"));
+    }
+    return { px, shadow, pal: Object.assign({}, COMMON, B.pal) };
+  }
+
+  function draw(ctx, key, pose, f, flags, scale, ox, oy) {
+    const r = render(key, pose, f, flags);
+    const s = scale; ox = ox || 0; oy = oy || 0;
+    ctx.fillStyle = "rgba(30,20,40,0.16)";
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (ellIn(x, y, r.shadow)) ctx.fillRect(ox + x * s, oy + y * s, s, s);
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+      const c = r.px[y * GW + x];
+      if (!c) continue;
+      ctx.fillStyle = r.pal[c] || "#ff00ff";
+      ctx.fillRect(ox + x * s, oy + y * s, s, s);
+    }
+  }
+  root.PixelPet = { draw, render, BREEDS, GW, GH, CFG };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+(() => {
+  const SCALE = 3;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let breed = "shiba";
+
+  const desk = document.getElementById("desk");
+  const petEl = document.getElementById("pet");
+  const cv = document.getElementById("pet-canvas");
+  const ctx = cv.getContext("2d");
+  const zzz = document.getElementById("zzz");
+  const modeEl = document.getElementById("mode");
+  const sleepBtn = document.getElementById("sleep");
+  const bowl = document.getElementById("bowl");
+
+  // 프레임 캐시: 같은 그림을 매번 다시 계산하지 않는다
+  const cache = new Map();
+  function frameCanvas(pose, f, flags) {
+    const key = [breed, pose, f, flags.happy ? 1 : 0, flags.blink ? 1 : 0, flags.yawn ? 1 : 0].join("|");
+    let c = cache.get(key);
+    if (!c) {
+      c = document.createElement("canvas");
+      c.width = PixelPet.GW * SCALE; c.height = PixelPet.GH * SCALE;
+      PixelPet.draw(c.getContext("2d"), breed, pose, f, flags, SCALE, 0, 0);
+      cache.set(key, c);
+    }
+    return c;
+  }
+
+  // 밥그릇 도트 (18x10)
+  function drawBowl() {
+    const rows = [
+      "......oooooo......",
+      "....oo4544544oo...",
+      "...o445445445544o.",
+      "..oooooooooooooooo",
+      "..o11111111111111o",
+      "..o12222222222221o",
+      "...o122222222221o.",
+      "....o1222222221o..",
+      ".....oooooooooo...",
+      ".................."
+    ];
+    const pal = { o: "#5a1f1f", "1": "#ff7b7b", "2": "#e2474a", "4": "#a86a3a", "5": "#cf9358" };
+    const b = bowl.getContext("2d");
+    b.clearRect(0, 0, bowl.width, bowl.height);
+    rows.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { b.fillStyle = pal[ch]; b.fillRect(x * 3, y * 3, 3, 3); } }));
+  }
+  drawBowl();
+
+  const MODE_LABEL = { walk: "걷는 중", sit: "쉬는 중", sleep: "자는 중", eat: "밥 먹는 중", yawn: "하품하는 중" };
+  const pet = { x: 140, dir: 1, mode: reduced ? "sit" : "walk", until: 4, happyUntil: 0, full: 62, mood: 58, lastKey: "", lastMode: "" };
+  let now = 0;
+
+  function setMode(mode, dur) { pet.mode = mode; pet.until = now + dur; }
+  function pickMode() {
+    if (reduced) { setMode("sit", 9999); return; }
+    const r = Math.random();
+    if (r < 0.5) { setMode("walk", 3 + Math.random() * 4); if (Math.random() < 0.4) pet.dir *= -1; }
+    else if (r < 0.78) setMode("sit", 2.5 + Math.random() * 3);
+    else if (r < 0.88) setMode("yawn", 1.8);
+    else setMode("sleep", 5 + Math.random() * 3);
+  }
+
+  function petW() { return cv.width; }
+  function say(text) {
+    const b = document.createElement("div");
+    b.className = "bubble";
+    b.textContent = text;
+    b.style.left = (pet.x + petW() / 2) + "px";
+    b.style.bottom = (38 + 108) + "px";
+    desk.appendChild(b);
+    setTimeout(() => b.remove(), 1700);
+  }
+  // 도트 하트
+  const HEART = [".oo.oo.", "o22o12o", "o22222o", ".o222o.", "..o2o..", "...o..."];
+  function heartCanvas() {
+    const c = document.createElement("canvas");
+    c.width = 21; c.height = 18; c.className = "heart";
+    const h = c.getContext("2d");
+    const pal = { o: "#7a1830", "1": "#ffd0dc", "2": "#ff5a7e" };
+    HEART.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { h.fillStyle = pal[ch]; h.fillRect(x * 3, y * 3, 3, 3); } }));
+    return c;
+  }
+  function hearts(n) {
+    for (let i = 0; i < n; i++) {
+      const h = heartCanvas();
+      h.style.left = (pet.x + petW() / 2 - 10 + (Math.random() * 40 - 20)) + "px";
+      h.style.bottom = (38 + 96) + "px";
+      h.style.setProperty("--dx", (Math.random() * 40 - 20) + "px");
+      h.style.animationDelay = (i * 0.14) + "s";
+      desk.appendChild(h);
+      setTimeout(() => h.remove(), 1600 + i * 140);
+    }
+  }
+  function cheer(text, stat) {
+    if (pet.mode === "sleep") { say("쿨쿨... 자는 중이에요"); return; }
+    pet[stat] = Math.min(100, pet[stat] + 28);
+    pet.happyUntil = now + 2.6;
+    setMode("sit", 3);
+    say(text);
+    hearts(3);
+  }
+  function feed() {
+    if (pet.mode === "sleep") { say("쿨쿨... 자는 중이에요"); return; }
+    pet.full = Math.min(100, pet.full + 35);
+    setMode("eat", 3.2);
+    pet.happyUntil = now + 3.2;
+    say("냠냠, 맛있어!");
+  }
+
+  document.getElementById("feed").addEventListener("click", feed);
+  document.getElementById("pat").addEventListener("click", () => cheer("헤헤, 좋아요", "mood"));
+  sleepBtn.addEventListener("click", () => {
+    if (pet.mode === "sleep") { setMode("sit", 2); say("잘 잤다!"); }
+    else setMode("sleep", 10);
+  });
+  petEl.addEventListener("click", () => cheer("헤헤, 좋아요", "mood"));
+  petEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cheer("헤헤, 좋아요", "mood"); } });
+
+  document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(o => o.setAttribute("aria-pressed", String(o === c)));
+    breed = c.dataset.breed;
+    pet.lastKey = "";
+    buildSheet();
+  }));
+
+  // 동작 시트
+  const SHEET = [
+    ["walk", 0, {}, "걷기 1"], ["walk", 1, {}, "걷기 2"], ["walk", 2, {}, "걷기 3"], ["walk", 3, {}, "걷기 4"], ["walk", 4, {}, "걷기 5"], ["walk", 5, {}, "걷기 6"],
+    ["sit", 0, {}, "앉기"], ["sit", 0, { blink: true }, "눈 깜빡"], ["sit", 1, { happy: true }, "기뻐함"], ["sit", 0, { yawn: true }, "하품"],
+    ["sleep", 0, {}, "자기 1"], ["sleep", 1, {}, "자기 2"]
+  ];
+  function buildSheet() {
+    const box = document.getElementById("sheet");
+    box.innerHTML = "";
+    SHEET.forEach(([pose, f, flags, label]) => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      const c = document.createElement("canvas");
+      c.width = PixelPet.GW * SCALE; c.height = PixelPet.GH * SCALE;
+      PixelPet.draw(c.getContext("2d"), breed, pose, f, flags, SCALE, 0, 0);
+      const s = document.createElement("span");
+      s.textContent = label;
+      cell.append(c, s);
+      box.appendChild(cell);
+    });
+  }
+  buildSheet();
+
+  // 이전/지금 비교 (시바견 앉은 모습)
+  PixelDog.draw(document.getElementById("cmp-old").getContext("2d"), "shiba", "sit", 0, false, 4, 0, 0);
+  PixelPet.draw(document.getElementById("cmp-new").getContext("2d"), "shiba", "sit", 0, {}, 4, 0, 0);
+
+  function renderStats() {
+    [["full", pet.full], ["mood", pet.mood]].forEach(([name, v]) => {
+      const bar = document.getElementById(name);
+      bar.style.width = v.toFixed(0) + "%";
+      bar.classList.toggle("low", v < 35);
+      document.getElementById(name + "-n").textContent = v.toFixed(0);
+    });
+  }
+  renderStats();
+
+  const clock = document.querySelector(".clock");
+  function tickClock() { clock.textContent = new Date().toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }); }
+  tickClock(); setInterval(tickClock, 15000);
+
+  let last = performance.now(), statTimer = 0;
+  function frame(ts) {
+    const dt = Math.min(0.05, (ts - last) / 1000);
+    last = ts; now += dt; statTimer += dt;
+    const maxX = Math.max(0, desk.clientWidth - petW());
+    if (now > pet.until) pickMode();
+    if (pet.mode === "walk") {
+      pet.x += pet.dir * 34 * dt;
+      if (pet.x <= 0) { pet.x = 0; pet.dir = 1; }
+      if (pet.x >= maxX) { pet.x = maxX; pet.dir = -1; }
+    }
+    pet.x = Math.min(pet.x, maxX);
+    petEl.style.transform = "translateX(" + Math.round(pet.x) + "px)";
+    cv.style.transform = pet.dir < 0 ? "scaleX(-1)" : "none";
+
+    // 어떤 그림을 보여 줄지
+    let pose = (pet.mode === "eat" || pet.mode === "yawn") ? "sit" : pet.mode, f = 0;
+    const flags = {};
+    if (pose === "walk") f = reduced ? 0 : Math.floor(now * 9) % 6;
+    else if (pose === "sit") { f = reduced ? 0 : Math.floor(now * 3) % 2; if (now % 3.6 < 0.16) flags.blink = true; }
+    else f = Math.floor(now * 0.9) % 2;
+    if (now < pet.happyUntil && pose === "sit") { flags.happy = true; flags.blink = false; }
+    if (pet.mode === "eat") { flags.happy = (Math.floor(now * 4) % 2) === 0; }
+    if (pet.mode === "yawn") { flags.yawn = true; flags.happy = false; flags.blink = false; f = 0; }
+    const key = [breed, pose, f, flags.happy ? 1 : 0, flags.blink ? 1 : 0, flags.yawn ? 1 : 0].join("|");
+    if (key !== pet.lastKey) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(frameCanvas(pose, f, flags), 0, 0);
+      pet.lastKey = key;
+    }
+
+    if (pet.lastMode !== pet.mode) {
+      modeEl.textContent = MODE_LABEL[pet.mode];
+      sleepBtn.textContent = pet.mode === "sleep" ? "깨우기" : "재우기";
+      zzz.hidden = pet.mode !== "sleep";
+      bowl.hidden = pet.mode !== "eat";
+      pet.lastMode = pet.mode;
+    }
+    if (pet.mode === "eat") {
+      const bx = pet.dir > 0 ? pet.x + petW() - 18 : pet.x - bowl.width + 18;
+      bowl.style.left = Math.max(0, Math.min(desk.clientWidth - bowl.width, bx)) + "px";
+    }
+    if (pet.mode === "sleep") {
+      zzz.style.left = (pet.x + petW() * (pet.dir < 0 ? 0.08 : 0.68)) + "px";
+      zzz.style.bottom = (38 + 82 + Math.sin(now * 2) * 4) + "px";
+    }
+    if (statTimer > 2) {
+      statTimer = 0;
+      pet.full = Math.max(5, pet.full - 1.5);
+      pet.mood = Math.min(100, Math.max(5, pet.mood - (pet.mode === "sleep" ? -1 : 1)));
+      renderStats();
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
