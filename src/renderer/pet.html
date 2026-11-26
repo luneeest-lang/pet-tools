@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'">
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; user-select: none; }
+  canvas#pet { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+  #layer { position: absolute; inset: 0; pointer-events: none; font: 13px "Malgun Gothic", "Segoe UI", sans-serif; }
+  .bubble { position: absolute; left: 50%; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: #fff; color: #1c2030;
+    white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); animation: pop 1.8s ease-out forwards; }
+  .bubble.info { animation-duration: 3s; }
+  @keyframes pop { 0% { opacity: 0; transform: translate(-50%, 6px); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; } 100% { opacity: 0; } }
+  .heart { position: absolute; image-rendering: pixelated; animation: float 1.3s ease-out forwards; }
+  @keyframes float { from { opacity: 1; transform: translate(0, 0); } to { opacity: 0; transform: translate(var(--dx), -60px); } }
+  .zzz { position: absolute; font-weight: 700; color: #2f66d8; text-shadow: 0 0 3px #fff; animation: zz 2s linear infinite; }
+  @keyframes zz { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px); } }
+</style>
+</head>
+<body>
+<canvas id="pet"></canvas>
+<div id="layer"></div>
+<script src="pet.js"></script>
+</body>
+</html>
