@@ -16,6 +16,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 
 const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [] };
 process.on("uncaughtException", e => diag.log("uncaught", e.stack || String(e)));
+process.on("unhandledRejection", e => diag.log("unhandled", (e && e.stack) || String(e)));
 
 const displaysNow = () => screen.getAllDisplays().map(d => ({ id: d.id, bounds: d.bounds, workArea: d.workArea }));
 
@@ -102,12 +103,13 @@ function start() {
   screen.on("display-removed", refresh);
   screen.on("display-metrics-changed", refresh);
 
-  let last = Date.now();
+  // 움직임 간격은 단조 시계(시스템 시각 변경에 영향 없음)로, 수치 계산은 실제 시각으로 한다.
+  let last = performance.now();
   setInterval(() => {
-    const now = Date.now();
-    const dt = Math.min(0.25, (now - last) / 1000);
-    last = now;
-    state.controller.tick(dt, now);
+    const mono = performance.now();
+    const dt = (mono - last) / 1000;
+    last = mono;
+    state.controller.tick(dt, Date.now());
   }, 1000 / FPS);
   setInterval(save, SAVE_EVERY_MS);
   state.hooks.forEach(h => h("started"));
@@ -119,7 +121,7 @@ app.whenReady().then(() => {
   const loaded = loadSave(state.file, Date.now(), lang);
   state.data = loaded.data;
   diag.log("start", { recovered: loaded.recovered, lang, version: app.getVersion() });
-  start();
+  try { start(); } catch (e) { diag.log("start-failed", e.stack || String(e)); throw e; }
 });
 
 app.on("before-quit", () => { if (state.controller) save(); });

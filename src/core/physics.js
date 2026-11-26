@@ -15,10 +15,15 @@ function stepBody(body, dt, floors) {
 
 // 화면 구성이 바뀌거나 화면 밖에 놓였을 때: 발밑 바닥이 사라졌거나 화면 밖이면 화면 안으로 끌어와 떨어지게 한다.
 function relocate(body, floors, displays) {
-  const onScreen = displays.some(d => inArea(body, d.workArea));
+  const onScreen = displays.some(d => inArea(body, d.bounds));
   if (body.state === "ground") {
     const f = floors.find(fl => fl.id === body.floorId);
-    if (f && onScreen && body.x >= f.x1 && body.x <= f.x2) return body;
+    if (f && onScreen && body.x >= f.x1 && body.x <= f.x2) {
+      // 같은 화면이라도 해상도·작업 표시줄이 바뀌면 바닥 높이가 바뀐다.
+      if (Math.abs(body.y - f.y) <= 1) return body;
+      if (f.y > body.y) return { ...body, state: "air", vx: 0, vy: 0, floorId: null }; // 바닥이 내려감: 떨어진다
+      return { ...body, y: f.y };                                                   // 바닥이 올라옴: 올라선다
+    }
   } else if (onScreen) return body;
   const p = clampToDisplays(body, displays);
   return { x: p.x, y: p.y, vx: 0, vy: 0, state: "air", floorId: null };

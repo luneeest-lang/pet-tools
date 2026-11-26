@@ -67,3 +67,32 @@ test("unknown fields survive a round trip", () => {
   assert.strictEqual(m.future, 1);
   assert.deepStrictEqual(m.pets[0].accessories, [{ id: "hat" }]);
 });
+
+for (const [label, raw] of [["a null pet", { version: 1, pets: [null] }], ["a pet without a spec", { version: 1, pets: [{ id: "x" }] }], ["pets that is not a list", { version: 1, pets: "nope" }]]) {
+  test(`a save with ${label} still gives a drawable pet`, () => {
+    const dir = tmp(), file = path.join(dir, "save.json");
+    fs.writeFileSync(file, JSON.stringify(raw));
+    const r = loadSave(file, NOW, "ko");
+    assert.ok(r.data.pets.length >= 1);
+    for (const p of r.data.pets) assert.ok(p && p.spec && p.spec.species && Number.isFinite(p.stats.full) && Number.isFinite(p.stats.mood), JSON.stringify(p));
+  });
+}
+
+test("garbage stats are replaced with numbers", () => {
+  const s = defaultSave(NOW, "ko");
+  s.pets[0].stats = { full: "a lot", mood: null, updatedAt: "yesterday" };
+  const m = migrate(s, NOW, "ko");
+  assert.deepStrictEqual([m.pets[0].stats.full, m.pets[0].stats.mood, m.pets[0].stats.updatedAt], [70, 65, NOW]);
+});
+
+test("if the broken file cannot be moved aside, the app still starts from defaults", () => {
+  const dir = tmp(), file = path.join(dir, "save.json");
+  fs.writeFileSync(file, "{oops");
+  const rename = fs.renameSync;
+  fs.renameSync = () => { throw Object.assign(new Error("busy"), { code: "EBUSY" }); };
+  try {
+    const r = loadSave(file, NOW, "ko");
+    assert.strictEqual(r.recovered, true);
+    assert.strictEqual(r.data.pets[0].presetId, "shiba");
+  } finally { fs.renameSync = rename; }
+});

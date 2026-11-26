@@ -10,6 +10,7 @@ const WALK_SPEED = 40;            // px/s (크기 3배 기준)
 const CLICK_MOVE = 6, CLICK_MS = 400;
 const LAND_SECONDS = 0.15, EAT_SECONDS = 3.2, HAPPY_SECONDS = 2.6;
 const HOVER_SECONDS = 0.6;
+const SUSPEND_GAP_MS = 60 * 1000;
 const TRICK_FPS = { stretch: 1.5, roll: 4, chase: 6 };
 const TRICK_FRAMES = { stretch: 2, roll: 2, chase: 4 };
 
@@ -29,7 +30,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   let scale = data.settings.scale || 3;
   let floors = groundFloors(displays);
   let screens = displays;
-  let clock = now, t = 0;
+  let clock = now, lastTickAt = now, t = 0;
   let mode = "sit", until = 0, variant = null, dir = 1;
   let happyUntil = -1, lastPatAt = null;
   let pointer = null;             // { downAt, x0, y0, dx, dy, held }
@@ -117,8 +118,13 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   }
 
   function tick(dt, nowMs) {
-    clock = nowMs; t += dt;
-    pet.stats = decay(pet.stats, nowMs, { running: true, sleeping: mode === "sleep" });
+    // 화면 갱신 간격은 0~0.25초로 묶는다(시계가 뒤로 가도 멈추거나 없는 그림을 찾지 않게).
+    dt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), 0.25) : 0;
+    const gap = nowMs - lastTickAt;
+    clock = nowMs; lastTickAt = nowMs; t += dt;
+    // 컴퓨터가 절전·최대 절전에 들어가 있던 시간(1분 넘는 공백)은 앱이 꺼져 있던 시간처럼 계산한다.
+    const asleep = gap > SUSPEND_GAP_MS;
+    pet.stats = decay(pet.stats, nowMs, { running: !asleep, sleeping: mode === "sleep" });
     if (mode !== "held") {
       if (body.state === "air") {
         const r = stepBody(body, dt, floors);

@@ -107,3 +107,21 @@ test("walking across a screen edge works only when the floors line up", () => {
   b.run(2);
   assert.ok(b.c.getBody().x <= 1920, `turned: ${b.c.getBody().x}`);
 });
+
+test("a clock that jumps backwards never freezes the pet or asks for frames that do not exist", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.45 });
+  run(1);
+  c.tick(-3600, at() - 3600 * 1000);
+  run(8);
+  for (const f of log.frames) assert.ok(KEYS.has(f.key), f.key);
+  assert.ok(c.getBody().x > 0 && c.getBody().x < 1920);
+});
+
+test("time the computer spent asleep counts like time the app was closed", () => {
+  const { c, run, at } = setup();
+  run(0.5);
+  c.tick(1 / 30, at() + 10 * 3600 * 1000);
+  const s = c.getSave().pets[0].stats;
+  assert.strictEqual(s.full, 40);
+  assert.strictEqual(s.mood, 40);
+});

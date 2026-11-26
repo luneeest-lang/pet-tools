@@ -27,18 +27,35 @@ function defaultSave(now, lang) {
   return { version: 1, activePetIds: [pet.id], pets: [pet], settings: { ...DEFAULT_SETTINGS, language: lang } };
 }
 
+const isObj = v => v !== null && typeof v === "object" && !Array.isArray(v);
+const num = (v, d) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+
+// 그릴 수 있는 펫인지: 스펙이 있거나, 아는 추천 조합 id가 있어야 한다.
+function repairPet(p, now) {
+  if (!isObj(p)) return null;
+  let spec = isObj(p.spec) && (p.spec.species === "dog" || p.spec.species === "cat") ? p.spec : null;
+  if (!spec && p.presetId) { const preset = PRESETS.find(x => x.id === p.presetId); if (preset) spec = JSON.parse(JSON.stringify(preset.spec)); }
+  if (!spec) return null;
+  const st = isObj(p.stats) ? p.stats : {};
+  const aff = isObj(p.affinity) ? p.affinity : {};
+  return {
+    ...p,
+    id: typeof p.id === "string" && p.id ? p.id : `p${now.toString(36)}`,
+    name: typeof p.name === "string" ? p.name : "",
+    spec,
+    stats: { ...st, full: num(st.full, 70), mood: num(st.mood, 65), updatedAt: num(st.updatedAt, now) },
+    affinity: { ...newAffinity(), ...aff, points: num(aff.points, 0), unlocked: Array.isArray(aff.unlocked) ? aff.unlocked : [] },
+    accessories: Array.isArray(p.accessories) ? p.accessories : []
+  };
+}
+
 // 빠진 필드를 기본값으로 채우고, 모르는 필드는 그대로 둔다.
 function migrate(raw, now, lang) {
   const base = defaultSave(now, lang);
   const data = { ...raw, version: 1 };
-  data.settings = { ...base.settings, ...(raw.settings || {}) };
-  data.pets = Array.isArray(raw.pets) && raw.pets.length ? raw.pets : base.pets;
-  data.pets = data.pets.map(p => ({
-    ...p,
-    stats: { full: 70, mood: 65, updatedAt: now, ...(p.stats || {}) },
-    affinity: { ...newAffinity(), ...(p.affinity || {}) },
-    accessories: p.accessories || []
-  }));
+  data.settings = { ...base.settings, ...(isObj(raw.settings) ? raw.settings : {}) };
+  const pets = (Array.isArray(raw.pets) ? raw.pets : []).map(p => repairPet(p, now)).filter(Boolean);
+  data.pets = pets.length ? pets : base.pets;
   const ids = new Set(data.pets.map(p => p.id));
   const active = (Array.isArray(raw.activePetIds) ? raw.activePetIds : []).filter(id => ids.has(id));
   data.activePetIds = active.length ? active : [data.pets[0].id];
@@ -51,8 +68,9 @@ function loadSave(file, now, lang) {
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (e) { raw = null; }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    fs.renameSync(file, path.join(path.dirname(file), `save.broken-${Date.now()}.json`));
+  if (!isObj(raw)) {
+    // 옆으로 치우지 못해도(백신·동기화 프로그램이 잡고 있을 때) 기본값으로 시작한다.
+    try { fs.renameSync(file, path.join(path.dirname(file), `save.broken-${Date.now()}.json`)); } catch (e) { /* 다음 저장 때 덮어쓴다 */ }
     return { data: defaultSave(now, lang), recovered: true };
   }
   return { data: migrate(raw, now, lang), recovered: false };

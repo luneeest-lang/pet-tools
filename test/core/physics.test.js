@@ -53,3 +53,21 @@ test("a body standing on a floor that still exists stays put", () => {
   const body = { x: 500, y: 1040, vx: 0, vy: 0, state: "ground", floorId: floors[0].id };
   assert.deepStrictEqual(relocate(body, floors, ONE), body);
 });
+
+test("when the work area grows on the same display, a grounded pet falls to the new floor", () => {
+  const small = [display(1, 0, 0, 1920, 1080)];
+  const big = [{ id: 1, bounds: { x: 0, y: 0, width: 2560, height: 1440 }, workArea: { x: 0, y: 0, width: 2560, height: 1400 } }];
+  const body = { x: 500, y: 1040, vx: 0, vy: 0, state: "ground", floorId: groundFloors(small)[0].id };
+  const floors = groundFloors(big);
+  let b = relocate(body, floors, big);
+  assert.strictEqual(b.state, "air");
+  for (let i = 0; i < 300 && b.state === "air"; i++) b = stepBody(b, 1 / 30, floors).body;
+  assert.strictEqual(b.y, 1400);
+});
+
+test("when the floor moves up on the same display, the pet snaps onto it", () => {
+  const body = { x: 500, y: 1080, vx: 0, vy: 0, state: "ground", floorId: "ground:1" };
+  const b = relocate(body, groundFloors(ONE), ONE);
+  assert.strictEqual(b.state, "ground");
+  assert.strictEqual(b.y, 1040);
+});

@@ -52,13 +52,19 @@
     return !!frames[current.key].px[gy * 48 + gx];
   }
 
-  let lastHit = false, pressed = false;
-  window.addEventListener("mousemove", e => {
-    const hit = pressed || hitAt(e.clientX, e.clientY);
+  let lastHit = false, pressed = false, mouse = null;
+  // 펫이 움직이거나 그림이 바뀌면 커서가 가만히 있어도 클릭 통과 여부를 다시 계산한다.
+  function updateHit() {
+    if (!mouse) return;
+    const hit = pressed || hitAt(mouse.x, mouse.y);
     if (hit !== lastHit) { lastHit = hit; window.pet.send("pet:hit", hit); window.pet.send("pet:hover", hit && !pressed); }
+  }
+  window.addEventListener("mousemove", e => {
+    mouse = { x: e.clientX, y: e.clientY };
+    updateHit();
     if (pressed) window.pet.send("pet:pointer", { type: "move", x: e.screenX, y: e.screenY });
   });
-  window.addEventListener("mouseleave", () => { if (!pressed && lastHit) { lastHit = false; window.pet.send("pet:hit", false); window.pet.send("pet:hover", false); } });
+  window.addEventListener("mouseleave", () => { mouse = null; if (!pressed && lastHit) { lastHit = false; window.pet.send("pet:hit", false); window.pet.send("pet:hover", false); } });
   window.addEventListener("pointerdown", e => {
     if (e.button !== 0 || !hitAt(e.clientX, e.clientY)) return;
     pressed = true; cv.setPointerCapture(e.pointerId);
@@ -113,7 +119,7 @@
 
   window.pet.on("pet:frames", d => { frames = d.frames; scale = d.scale; cache.clear(); resize(); });
   window.pet.on("pet:scale", s => { scale = s; cache.clear(); resize(); });
-  window.pet.on("pet:show", f => { current = f; draw(); });
+  window.pet.on("pet:show", f => { current = f; draw(); updateHit(); });
   window.pet.on("pet:debug", on => { debug = on; draw(); });
   window.addEventListener("resize", resize);
   resize();
