@@ -137,3 +137,87 @@ test("releasing the pet over the taskbar lands it on the taskbar, not off screen
   assert.strictEqual(c.getBody().state, "ground");
   assert.strictEqual(c.getBody().y, 1040);
 });
+
+/* ---------- 2단계: 창 위 ---------- */
+const WIN = (x = 300, y = 400, width = 900, height = 500, id = "N") => ({ id, x, y, width, height });
+
+function dropOn(c, at, x, y) {
+  const b = c.getBody();
+  c.grab(b.x, b.y - 20, at());
+  c.drag(x, y - 20, at());
+  c.release(x, y - 20, at());
+}
+
+test("a pet dropped above an open window lands on its top", () => {
+  const { c, run, at } = setup();
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 700, 300);
+  run(1.5);
+  assert.ok(c.getBody().floorId.startsWith("win:N:"), c.getBody().floorId);
+  assert.strictEqual(c.getBody().y, 400);
+});
+
+test("moving the window carries the pet along", () => {
+  const { c, run, at } = setup({ rng: () => 0.7 });
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 700, 300);
+  run(1.5);
+  const before = c.getBody();
+  c.setWindows([WIN(500, 350)]);
+  const after = c.getBody();
+  assert.ok(Math.abs(after.x - (before.x + 200)) < 0.01);
+  assert.strictEqual(after.y, 350);
+  assert.strictEqual(after.state, "ground");
+});
+
+test("pushing the window off screen so the pet's spot is gone drops it to the taskbar", () => {
+  const { c, run, at } = setup({ rng: () => 0.7 });
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 1100, 300);
+  run(1.5);
+  c.setWindows([WIN(1100 + 900, 400)]); // 창이 화면 오른쪽 밖으로
+  run(2);
+  assert.strictEqual(c.getBody().y, 1040);
+  assert.strictEqual(c.getBody().state, "ground");
+});
+
+test("another window covering the pet's spot makes it fall", () => {
+  const { c, run, at } = setup({ rng: () => 0.7 });
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 700, 300);
+  run(1.5);
+  const x = c.getBody().x;
+  c.setWindows([WIN(x - 150, 200, 300, 400, "F"), WIN()]);
+  run(2);
+  assert.strictEqual(c.getBody().y, 1040);
+});
+
+test("closing the window under the pet shows a surprised fall and a landing with finite coordinates", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.7 });
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 700, 300);
+  run(1.5);
+  const from = log.frames.length;
+  c.setWindows([]);
+  run(2);
+  const keys = log.frames.slice(from).map(f => f.key);
+  assert.ok(keys.indexOf("fall:0:") >= 0 && keys.indexOf("land:0:") > keys.indexOf("fall:0:"), keys.join(" "));
+  const b = c.getBody();
+  assert.ok(Number.isFinite(b.x) && Number.isFinite(b.y));
+  assert.strictEqual(b.y, 1040);
+});
+
+test("with perching turned off, a pet dropped over a window falls to the taskbar", () => {
+  const { c, run, at } = setup();
+  c.setPerch(false);
+  c.setWindows([WIN()]);
+  run(0.3);
+  dropOn(c, at, 700, 300);
+  run(2);
+  assert.strictEqual(c.getBody().y, 1040);
+});

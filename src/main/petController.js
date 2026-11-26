@@ -4,6 +4,7 @@ const { decay, feed, pat, isSad } = require("../core/stats.js");
 const { addCare } = require("../core/affinity.js");
 const { createBrain } = require("../core/brain.js");
 const { groundFloors } = require("../core/floors.js");
+const { windowFloors } = require("../core/windowFloors.js");
 const { stepBody, relocate } = require("../core/physics.js");
 
 const WALK_SPEED = 40;            // px/s (크기 3배 기준)
@@ -28,8 +29,12 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   const pet = data.pets.find(p => p.id === data.activePetIds[0]) || data.pets[0];
   const brain = createBrain(rng);
   let scale = data.settings.scale || 3;
-  let floors = groundFloors(displays);
   let screens = displays;
+  let wins = [];
+  let perch = data.settings.perchOnWindows !== false;
+  let floors = [];
+  const rebuildFloors = () => { floors = groundFloors(screens).concat(perch ? windowFloors(wins, screens) : []); };
+  rebuildFloors();
   let clock = now, lastTickAt = now, t = 0;
   let mode = "sit", until = 0, variant = null, dir = 1;
   let happyUntil = -1, lastPatAt = null;
@@ -41,7 +46,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
 
   function initialBody() {
     const pos = pet.position;
-    const floor = (pos && floors.find(f => f.id === `ground:${pos.displayId}`)) || floors[0];
+    const floor = (pos && floors.find(f => f.id === `ground:${pos.displayId}`)) || floors.find(f => f.kind === "ground") || floors[0];
     const x = pos && floor.id === `ground:${pos.displayId}` ? Math.min(Math.max(pos.x, floor.x1), floor.x2) : (floor.x1 + floor.x2) / 2;
     return { x, y: floor.y, vx: 0, vy: 0, state: "ground", floorId: floor.id };
   }
@@ -84,6 +89,27 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
       dir = -dir;
     }
     body = { ...body, x };
+  }
+
+  const floorOf = id => floors.find(f => f.id === id);
+  const windowIdOf = floorId => (floorId && floorId.startsWith("win:") ? floorId.split(":")[1] : null);
+
+  function fallNow() {
+    // 화면 밖이거나 아래에 바닥이 없으면 화면 안으로 끌어온 뒤 떨어진다.
+    body = relocate({ ...body, state: "air", vx: 0, vy: 0, floorId: null }, floors, screens);
+    setMode("fall", Infinity);
+  }
+
+  // 펫이 서 있는 창이 움직이면 같이 움직이고, 그 자리가 사라지면 떨어진다.
+  function followWindow(prevWins) {
+    const winId = windowIdOf(body.floorId);
+    if (!winId || body.state !== "ground") return;
+    const before = prevWins.find(w => w.id === winId), now = wins.find(w => w.id === winId);
+    if (!before || !now || !perch) return fallNow();
+    const x = body.x + (now.x - before.x), y = body.y + (now.y - before.y);
+    const spot = floors.find(f => f.windowId === winId && Math.abs(f.y - y) <= 1 && x >= f.x1 && x <= f.x2);
+    if (!spot) { body = { ...body, x, y }; return fallNow(); }
+    body = { ...body, x, y: spot.y, floorId: spot.id };
   }
 
   function frameKey() {
@@ -196,12 +222,27 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
     },
     setDisplays(next) {
       screens = next;
-      floors = groundFloors(next);
-      body = relocate(body, floors, screens);
+      rebuildFloors();
+      if (windowIdOf(body.floorId)) followWindow(wins);
+      else body = relocate(body, floors, screens);
     },
+    setWindows(next) {
+      const prev = wins;
+      wins = next;
+      rebuildFloors();
+      followWindow(prev);
+      emit();
+    },
+    setPerch(on) {
+      perch = !!on;
+      data.settings.perchOnWindows = perch;
+      rebuildFloors();
+      if (windowIdOf(body.floorId) && !perch) fallNow();
+    },
+    getFloors: () => floors.map(f => ({ ...f })),
     setScale(s) { scale = s; data.settings.scale = s; lastWin = null; emit(); },
     summon() {
-      const f = floors[0];
+      const f = floors.find(fl => fl.kind === "ground") || floors[0];
       body = { x: (f.x1 + f.x2) / 2, y: f.y - 200, vx: 0, vy: 0, state: "air", floorId: null };
       setMode("fall", Infinity);
     },
@@ -211,7 +252,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
     getPet: () => pet,
     getSave() {
       const floor = floors.find(f => f.id === body.floorId);
-      if (floor && body.state === "ground") pet.position = { displayId: floor.displayId, x: Math.round(body.x), floor: "ground" };
+      if (floor && floor.kind === "ground" && body.state === "ground") pet.position = { displayId: floor.displayId, x: Math.round(body.x), floor: "ground" };
       return data;
     }
   };
