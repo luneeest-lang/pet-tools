@@ -1,0 +1,17 @@
+{
+  "name": "pet-tools",
+  "productName": "Pet Tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pixel desktop pet for Windows",
+  "main": "src/main/main.js",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "start": "electron .",
+    "dist": "electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  }
+}
