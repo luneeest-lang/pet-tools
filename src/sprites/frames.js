@@ -1,0 +1,29 @@
+// 앱이 쓰는 모든 동작 프레임 목록과, 스펙 하나의 모든 프레임 만들기
+const { renderFrame } = require("./render.js");
+
+const POSES = { walk: 6, sit: 2, sleep: 2, crouch: 1, air: 2, land: 1, fall: 1, held: 2, lookdown: 1, stretch: 2, roll: 2, chase: 4 };
+
+function frameKey(pose, frame, flags) {
+  const on = Object.keys(flags || {}).filter(k => flags[k]).sort();
+  return `${pose}:${frame}:${on.join(",")}`;
+}
+
+const FRAME_LIST = [];
+for (const [pose, n] of Object.entries(POSES)) for (let f = 0; f < n; f++) FRAME_LIST.push({ pose, frame: f, flags: {} });
+FRAME_LIST.push(
+  { pose: "sit", frame: 0, flags: { blink: true } },
+  { pose: "sit", frame: 0, flags: { happy: true } },
+  { pose: "sit", frame: 1, flags: { happy: true } },
+  { pose: "sit", frame: 0, flags: { yawn: true } },
+  { pose: "sit", frame: 0, flags: { sad: true } },
+  { pose: "sit", frame: 1, flags: { sad: true } }
+);
+FRAME_LIST.forEach(f => { f.key = frameKey(f.pose, f.frame, f.flags); });
+
+function renderAllFrames(spec) {
+  const out = new Map();
+  for (const f of FRAME_LIST) out.set(f.key, renderFrame(spec, f.pose, f.frame, f.flags));
+  return out;
+}
+
+module.exports = { POSES, FRAME_LIST, frameKey, renderAllFrames };

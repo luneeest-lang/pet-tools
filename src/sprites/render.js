@@ -7,6 +7,9 @@ const { buildPalette, hexToHsl } = require("./palette.js");
 const EYE = [".KKK.", "KHHKK", "KHHKK", "KKKKK", "KIISK", ".KKK."];
 // 어두운 털에서는 검은 눈이 털에 묻히므로 눈동자 색을 넓게 칠한다.
 const EYE_DARK = [".KKK.", "KHHIK", "KHIIK", "KIKIK", "KIISK", ".KKK."];
+// 시무룩한 눈: 위가 평평하게 반쯤 감긴 눈
+const EYE_SAD = ["KKKKK", "KHHKK", "KKKKK", ".KKK."];
+const EYE_SAD_DARK = ["KKKKK", "KHHIK", "KIISK", ".KKK."];
 const CAT_EYE_X = [-7, 1], EYE_Y = -3, NOSE_DY = 1;
 const STAMP_KEYS = { K: "K", H: "H", S: "S", I: "IR", J: "IR2", N: "N", n: "NH", Q: "Q", P: "P", D: "PD" };
 
@@ -107,21 +110,27 @@ function isDarkCoat(spec) {
   return !spec.palette && !!spec.colors && hexToHsl(spec.colors.main).l < 0.25;
 }
 
-function paintFace(px, B, head, pose, flags, darkCoat) {
+function faceOf(pose, flags) {
+  const eyes = flags.yawn ? "yawn" : (pose === "sleep" || flags.blink) ? "closed" : flags.happy ? "happy" : flags.sad ? "sad" : "open";
+  const mouth = flags.yawn ? "yawn" : flags.sad ? "flat" : "smile";
+  return { eyes, mouth, tongue: !!flags.happy && pose !== "sleep" };
+}
+
+function paintFace(px, B, head, face, darkCoat) {
   const hx = Math.round(head.cx), hy = Math.round(head.cy);
   const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < GW && y < GH) px[y * GW + x] = c; };
   const stamp = (x0, y0, rows) => rows.forEach((r, dy) => [...r].forEach((ch, dx) => {
     if (ch !== ".") put(x0 + dx, y0 + dy, STAMP_KEYS[ch]);
   }));
   const dog = B.species === "dog";
-  const closed = pose === "sleep" || flags.blink;
   const eyesX = dog ? [hx - 6, hx + 4] : CAT_EYE_X.map(d => hx + d);
   const ey = hy + EYE_Y;
   eyesX.forEach((ex, idx) => {
-    if (flags.yawn) {
+    if (face.eyes === "yawn") {
       if (idx === 0) stamp(ex + 1, ey + 1, ["KK..", "..KK", "KK.."]); else stamp(ex, ey + 1, ["..KK", "KK..", "..KK"]);
-    } else if (closed) stamp(ex, ey + 2, ["K...K", ".KKK."]);
-    else if (flags.happy) stamp(ex, ey + 2, [".KKK.", "K...K"]);
+    } else if (face.eyes === "closed") stamp(ex, ey + 2, ["K...K", ".KKK."]);
+    else if (face.eyes === "happy") stamp(ex, ey + 2, [".KKK.", "K...K"]);
+    else if (face.eyes === "sad") stamp(ex, ey + 2, darkCoat ? EYE_SAD_DARK : EYE_SAD);
     else stamp(ex, ey, darkCoat ? EYE_DARK : EYE);
   });
   if (dog && B.brows) eyesX.forEach(ex => { put(ex + 1, ey - 2, "C1"); put(ex + 2, ey - 2, "C1"); put(ex + 3, ey - 2, "C1"); });
@@ -134,10 +143,12 @@ function paintFace(px, B, head, pose, flags, darkCoat) {
   if (dog) stamp(cx - 1, ny, ["NnN", "NNN", ".N."]);
   else stamp(cx - 1, ny, ["QQQ", ".Q."]);
   const my = dog ? ny + 3 : ny + 2;
-  if (flags.yawn) stamp(cx - 1, my, ["DDD", "DPD", ".D."]);
+  if (face.mouth === "yawn") stamp(cx - 1, my, ["DDD", "DPD", ".D."]);
+  else if (face.mouth === "flat") [[cx - 1, my + 1], [cx, my + 1], [cx + 1, my + 1]].forEach(([x, y]) => put(x, y, "MO"));
+  else if (face.mouth === "o") [[cx, my], [cx - 1, my + 1], [cx + 1, my + 1], [cx, my + 2]].forEach(([x, y]) => put(x, y, "MO"));
   else {
     [[cx - 2, my], [cx - 1, my + 1], [cx, my], [cx + 1, my + 1], [cx + 2, my]].forEach(([x, y]) => put(x, y, "MO"));
-    if (flags.happy && pose !== "sleep") { put(cx - 1, my + 2, "P"); put(cx, my + 2, "P"); put(cx + 1, my + 2, "P"); put(cx, my + 3, "P"); }
+    if (face.tongue) { put(cx - 1, my + 2, "P"); put(cx, my + 2, "P"); put(cx + 1, my + 2, "P"); put(cx, my + 3, "P"); }
   }
   const blush = dog ? [hx - 9, hx + 10] : [hx - 8, hx + 6];
   blush.forEach(bx => { put(bx, hy + 2, "B"); put(bx + 1, hy + 2, "B"); });
@@ -152,21 +163,28 @@ function paintFace(px, B, head, pose, flags, darkCoat) {
 // 색 키 배열(px)까지만 만든다. 새 동작 그림의 테스트에서 키를 직접 볼 수 있게 따로 둔다.
 function renderKeys(spec, pose, frame, flags) {
   flags = flags || {};
-  const { parts, head, shadow, traits } = buildParts(spec, pose, frame, flags);
+  const { parts, head, shadow, traits, face, flip } = buildParts(spec, pose, frame, flags);
   parts.forEach((p, i) => { p._o = i; });
   parts.sort((a, b) => a.z - b.z || a._o - b._o);
   const painted = paintBody(parts);
   const { r2, t2 } = shadeContacts(parts, painted);
   const px = outline(painted.id, r2, t2);
-  paintFace(px, traits, head, pose, flags, isDarkCoat(spec));
-  return { px, shadowShape: shadow };
+  paintFace(px, traits, head, face || faceOf(pose, flags), isDarkCoat(spec));
+  return { px: flip ? mirror(px) : px, shadowShape: shadow, flip };
+}
+
+function mirror(arr) {
+  const out = new Array(arr.length);
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) out[y * GW + x] = arr[y * GW + (GW - 1 - x)];
+  return out;
 }
 
 function renderFrame(spec, pose, frame, flags) {
-  const { px, shadowShape } = renderKeys(spec, pose, frame, flags);
+  const { px, shadowShape, flip } = renderKeys(spec, pose, frame, flags);
   const pal = buildPalette(spec);
-  const shadow = new Array(GW * GH);
+  let shadow = new Array(GW * GH);
   for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) shadow[y * GW + x] = ellIn(x, y, shadowShape);
+  if (flip) shadow = mirror(shadow);
   return { w: GW, h: GH, px: px.map(k => (k ? pal[k] : null)), shadow };
 }
 
