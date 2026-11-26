@@ -12,6 +12,19 @@ const PRESETS = [
     spec: {"species":"cat","ears":"cat","tail":"long","pattern":["muzzle","belly","socks","blaze"],"fluffy":false,"shape":{"bigMuzzle":true,"chest":true},"colors":{"main":"#332e40","second":"#e9e8f3"},"eye":"#dcd84f","palette":{"F0":"#77718a","F1":"#524c62","F2":"#332e40","F3":"#221e2c","F4":"#15121d","C0":"#ffffff","C1":"#fbfbff","C2":"#e9e8f3","C3":"#c8c6d8","C4":"#9895ad","I1":"#e6a9b6","I2":"#b77d8c","O":"#0b0910","OL":"#1b1824","OC":"#5f5c75","OCL":"#8a87a0","IR":"#dcd84f","IR2":"#a7a22c","Q":"#f1a1ad","MO":"#6b5868","WH":"#ffffff"}} },
   { id: "russian", name: {"ko":"하늘","en":"Haneul"},
     spec: {"species":"cat","ears":"cat","tail":"long","pattern":[],"fluffy":false,"colors":{"main":"#8593ad","second":null},"eye":"#86d96f","palette":{"F0":"#dbe3f1","F1":"#adb9cf","F2":"#8593ad","F3":"#64708e","F4":"#454d6c","C0":"#dbe3f1","C1":"#adb9cf","C2":"#8593ad","C3":"#64708e","C4":"#454d6c","I1":"#c9a7b8","I2":"#9f8299","O":"#232740","OL":"#3f4768","OC":"#232740","OCL":"#3f4768","IR":"#86d96f","IR2":"#4fa648","Q":"#7a6f8c","MO":"#343a58","WH":"#eef2fa"}} },
+  // 아래 6개는 털색만 정하고 명암은 자동으로 만든다.
+  { id: "corgi", name: {"ko":"콩이","en":"Kongi"},
+    spec: {"species":"dog","ears":"pointy","tail":"plume","pattern":["muzzle","belly","socks","blaze"],"fluffy":false,"colors":{"main":"#e0974a","second":"#fbf3e6"},"eye":"#7a4a32"} },
+  { id: "poodle", name: {"ko":"초코","en":"Choco"},
+    spec: {"species":"dog","ears":"floppy","tail":"plume","pattern":[],"fluffy":true,"colors":{"main":"#b8703f","second":null},"eye":"#4a2e26"} },
+  { id: "jindo", name: {"ko":"백구","en":"Baekgu"},
+    spec: {"species":"dog","ears":"pointy","tail":"curl","pattern":["muzzle","belly"],"fluffy":false,"colors":{"main":"#efe4d2","second":"#fffdf8"},"eye":"#5a3a2e"} },
+  { id: "black", name: {"ko":"밤이","en":"Bami"},
+    spec: {"species":"cat","ears":"cat","tail":"long","pattern":[],"fluffy":false,"colors":{"main":"#2e2a33","second":null},"eye":"#e8c547"} },
+  { id: "white", name: {"ko":"눈송이","en":"Snowy"},
+    spec: {"species":"cat","ears":"cat","tail":"long","pattern":[],"fluffy":false,"colors":{"main":"#f6f3ef","second":null},"eye":"#7fb8e8"} },
+  { id: "mackerel", name: {"ko":"모카","en":"Mocha"},
+    spec: {"species":"cat","ears":"cat","tail":"long","pattern":["muzzle","belly","stripes"],"fluffy":false,"colors":{"main":"#8c8478","second":"#f1ece4"},"eye":"#9bc25a"} },
 ];
 
 module.exports = { PRESETS };

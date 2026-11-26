@@ -1,10 +1,12 @@
 // 부위 목록 → 48x40 색 배열. 명암, 안쪽 선, 그림자, 반사광, 외곽선, 얼굴 순서로 칠한다.
 const { GW, GH, LIGHT, ellIn, triIn, nearestCircle, inside, normal } = require("./shapes.js");
 const { buildParts } = require("./poses.js");
-const { buildPalette } = require("./palette.js");
+const { buildPalette, hexToHsl } = require("./palette.js");
 
 // 크고 동그란 눈(5x6): 검은 눈 + 반짝임 2칸 + 아래쪽에 비치는 눈동자 색
 const EYE = [".KKK.", "KHHKK", "KHHKK", "KKKKK", "KIISK", ".KKK."];
+// 어두운 털에서는 검은 눈이 털에 묻히므로 눈동자 색을 넓게 칠한다.
+const EYE_DARK = [".KKK.", "KHHIK", "KHIIK", "KIKIK", "KIISK", ".KKK."];
 const CAT_EYE_X = [-7, 1], EYE_Y = -3, NOSE_DY = 1;
 const STAMP_KEYS = { K: "K", H: "H", S: "S", I: "IR", J: "IR2", N: "N", n: "NH", Q: "Q", P: "P", D: "PD" };
 
@@ -101,7 +103,11 @@ function outline(id, r2, t2) {
   return px;
 }
 
-function paintFace(px, B, head, pose, flags) {
+function isDarkCoat(spec) {
+  return !spec.palette && !!spec.colors && hexToHsl(spec.colors.main).l < 0.25;
+}
+
+function paintFace(px, B, head, pose, flags, darkCoat) {
   const hx = Math.round(head.cx), hy = Math.round(head.cy);
   const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < GW && y < GH) px[y * GW + x] = c; };
   const stamp = (x0, y0, rows) => rows.forEach((r, dy) => [...r].forEach((ch, dx) => {
@@ -116,7 +122,7 @@ function paintFace(px, B, head, pose, flags) {
       if (idx === 0) stamp(ex + 1, ey + 1, ["KK..", "..KK", "KK.."]); else stamp(ex, ey + 1, ["..KK", "KK..", "..KK"]);
     } else if (closed) stamp(ex, ey + 2, ["K...K", ".KKK."]);
     else if (flags.happy) stamp(ex, ey + 2, [".KKK.", "K...K"]);
-    else stamp(ex, ey, EYE);
+    else stamp(ex, ey, darkCoat ? EYE_DARK : EYE);
   });
   if (dog && B.brows) eyesX.forEach(ex => { put(ex + 1, ey - 2, "C1"); put(ex + 2, ey - 2, "C1"); put(ex + 3, ey - 2, "C1"); });
   if (!dog && B.stripes) {
@@ -152,7 +158,7 @@ function renderKeys(spec, pose, frame, flags) {
   const painted = paintBody(parts);
   const { r2, t2 } = shadeContacts(parts, painted);
   const px = outline(painted.id, r2, t2);
-  paintFace(px, traits, head, pose, flags);
+  paintFace(px, traits, head, pose, flags, isDarkCoat(spec));
   return { px, shadowShape: shadow };
 }
 
