@@ -13,5 +13,36 @@
   "devDependencies": {
     "electron": "^45.5.0",
     "electron-builder": "^26.18.0"
-  }
+  },
+  "build": {
+    "appId": "io.github.luneeest-lang.pettools",
+    "productName": "Pet Tools",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "PetTools-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Pet Tools"
+    }
+  },
+  "author": "luneeest-lang"
 }
