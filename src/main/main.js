@@ -10,13 +10,16 @@ const { createTray } = require("./tray.js");
 const { openSettings } = require("./settingsWindow.js");
 const diag = require("./diagnostics.js");
 const { hitTest } = require("./hitTest.js");
+const { listWindows, foregroundHwnd } = require("./win32/windows.js");
+const { toDipWindows } = require("./win32/convert.js");
+const { isFullscreen } = require("../core/fullscreen.js");
 
 const FPS = 30, SAVE_EVERY_MS = 5000;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [],
-  frames: {}, lastHit: null, pointerDown: false };
+  frames: {}, lastHit: null, pointerDown: false, fullscreenHidden: false, lastFloorsLog: "" };
 process.on("uncaughtException", e => diag.log("uncaught", e.stack || String(e)));
 process.on("unhandledRejection", e => diag.log("unhandled", (e && e.stack) || String(e)));
 
@@ -49,11 +52,37 @@ function updateHit() {
   state.controller.hover(hit && !state.pointerDown);
 }
 
+// 사용자가 숨겼거나, 전체 화면 앱이 앞에 있으면 숨긴다.
+function applyVisibility() {
+  const hide = state.hidden || state.fullscreenHidden;
+  if (hide && state.win.isVisible()) state.win.hide();
+  if (!hide && !state.win.isVisible()) state.win.showInactive();
+  state.lastHit = null; // 다시 보일 때 클릭 통과 설정을 새로 건다
+}
+
 function toggleHidden() {
   state.hidden = !state.hidden;
-  if (state.hidden) state.win.hide(); else state.win.showInactive();
-  state.lastHit = null; // 다시 보일 때 클릭 통과 설정을 새로 건다
+  applyVisibility();
   diag.log("hidden", state.hidden);
+}
+
+// 창 목록 읽기: 0.2초마다, 펫이 창 위나 창 끝에 있으면 0.05초마다.
+function pollWindows() {
+  const raw = listWindows();
+  const toDip = r => {
+    const rect = { x: r.left, y: r.top, width: r.right - r.left, height: r.bottom - r.top };
+    return process.platform === "win32" ? screen.screenToDipRect(null, rect) : rect;
+  };
+  const wins = toDipWindows(raw, process.pid, toDip);
+  state.controller.setWindows(wins);
+  const settings = state.controller.getSave().settings;
+  const fgId = foregroundHwnd();
+  const full = settings.hideOnFullscreen !== false && isFullscreen(wins.find(w => w.id === fgId) || null, displaysNow());
+  if (full !== state.fullscreenHidden) { state.fullscreenHidden = full; applyVisibility(); diag.log("fullscreen", full); }
+  if (state.debug) {
+    const summary = JSON.stringify(state.controller.getFloors().map(f => [f.id, Math.round(f.x1), Math.round(f.x2), Math.round(f.y)]));
+    if (summary !== state.lastFloorsLog) { state.lastFloorsLog = summary; diag.log("floors", summary); }
+  }
 }
 
 function applyStartup(settings) {
@@ -101,13 +130,15 @@ function start() {
     const settings = state.controller.getSave().settings;
     const table = STRINGS[state.lang];
     const text = {};
-    for (const k of ["title", "size", "size2", "size3", "size4", "startup", "language", "close"]) text[k] = table["settings." + k];
+    for (const k of ["title", "size", "size2", "size3", "size4", "startup", "language", "close", "behavior", "perch", "hideFullscreen"]) text[k] = table["settings." + k];
     return { settings, text };
   });
   ipcMain.handle("settings:set", (_e, patch) => {
     const settings = state.controller.getSave().settings;
     if (patch.scale && [2, 3, 4].includes(patch.scale)) { state.controller.setScale(patch.scale); state.win.webContents.send("pet:scale", patch.scale); }
     if (typeof patch.launchAtStartup === "boolean") { settings.launchAtStartup = patch.launchAtStartup; applyStartup(settings); }
+    if (typeof patch.perchOnWindows === "boolean") state.controller.setPerch(patch.perchOnWindows);
+    if (typeof patch.hideOnFullscreen === "boolean") settings.hideOnFullscreen = patch.hideOnFullscreen;
     if (patch.language === "ko" || patch.language === "en") { settings.language = patch.language; state.lang = patch.language; }
     diag.log("settings", patch);
     save();
@@ -131,6 +162,14 @@ function start() {
     updateHit();
   }, 1000 / FPS);
   setInterval(save, SAVE_EVERY_MS);
+  let polls = 0;
+  setInterval(() => {
+    polls++;
+    const onWindow = /^win:/.test(state.controller.getBody().floorId || "");
+    if (onWindow || polls % 4 === 0) {
+      try { pollWindows(); } catch (e) { diag.log("poll-error", e.stack || String(e)); }
+    }
+  }, 50);
   state.hooks.forEach(h => h("started"));
 }
 

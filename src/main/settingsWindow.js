@@ -6,7 +6,7 @@ let win = null;
 function openSettings() {
   if (win && !win.isDestroyed()) { win.show(); win.focus(); return win; }
   win = new BrowserWindow({
-    width: 380, height: 330, resizable: false, minimizable: false, maximizable: false, show: false,
+    width: 400, height: 430, resizable: false, minimizable: false, maximizable: false, show: false,
     autoHideMenuBar: true, backgroundColor: "#f4f6fb",
     webPreferences: { preload: path.join(__dirname, "..", "preload", "settings.js"), contextIsolation: true, nodeIntegration: false, sandbox: true }
   });

@@ -13,6 +13,7 @@ const STRINGS = {
     "menu.exportLog": "로그 내보내기", "menu.quit": "종료",
     "settings.title": "설정", "settings.size": "크기", "settings.size2": "작게 (2배)", "settings.size3": "보통 (3배)", "settings.size4": "크게 (4배)",
     "settings.startup": "Windows를 켤 때 자동으로 실행", "settings.language": "언어", "settings.close": "닫기",
+    "settings.behavior": "행동", "settings.perch": "열린 창 위에 올라가기", "settings.hideFullscreen": "게임·영상을 전체 화면으로 볼 때 숨기기",
     "tray.tooltip": "{name} 지내는 중"
   },
   en: {
@@ -28,6 +29,7 @@ const STRINGS = {
     "menu.exportLog": "Export log", "menu.quit": "Quit",
     "settings.title": "Settings", "settings.size": "Size", "settings.size2": "Small (2x)", "settings.size3": "Normal (3x)", "settings.size4": "Large (4x)",
     "settings.startup": "Start automatically with Windows", "settings.language": "Language", "settings.close": "Close",
+    "settings.behavior": "Behavior", "settings.perch": "Climb onto open windows", "settings.hideFullscreen": "Hide while a game or video is fullscreen",
     "tray.tooltip": "{name} is hanging out"
   }
 };

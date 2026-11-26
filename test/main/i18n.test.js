@@ -35,3 +35,9 @@ test("no menu item is a placeholder for later", () => {
   for (const lang of ["ko", "en"]) for (const l of labels(buildMenuTemplate({ hidden: false, debug: true }, lang, handlers)))
     assert.ok(!/준비 중|coming soon|soon/i.test(l), l);
 });
+
+test("the two new settings have Korean and English labels", () => {
+  for (const k of ["settings.perch", "settings.hideFullscreen"]) {
+    assert.ok(STRINGS.ko[k] && STRINGS.en[k], k);
+  }
+});
