@@ -54,21 +54,17 @@
 
   let lastHit = false, pressed = false, mouse = null;
   // 펫이 움직이거나 그림이 바뀌면 커서가 가만히 있어도 클릭 통과 여부를 다시 계산한다.
-  function updateHit() {
-    if (!mouse) return;
-    const hit = pressed || hitAt(mouse.x, mouse.y);
-    if (hit !== lastHit) { lastHit = hit; window.pet.send("pet:hit", hit); window.pet.send("pet:hover", hit && !pressed); }
-  }
+  // 클릭 통과 여부는 메인 프로세스가 커서 위치로 직접 정한다(main.js updateHit). 여기서는 눌림 상태만 추적한다.
+  function updateHit() {}
   window.addEventListener("mousemove", e => {
     mouse = { x: e.clientX, y: e.clientY };
     updateHit();
     if (pressed) window.pet.send("pet:pointer", { type: "move", x: e.screenX, y: e.screenY });
   });
-  window.addEventListener("mouseleave", () => { mouse = null; if (!pressed && lastHit) { lastHit = false; window.pet.send("pet:hit", false); window.pet.send("pet:hover", false); } });
+  window.addEventListener("mouseleave", () => { mouse = null; });
   window.addEventListener("pointerdown", e => {
     if (e.button !== 0 || !hitAt(e.clientX, e.clientY)) return;
     pressed = true; cv.setPointerCapture(e.pointerId);
-    window.pet.send("pet:hover", false);
     window.pet.send("pet:pointer", { type: "down", x: e.screenX, y: e.screenY });
   });
   window.addEventListener("pointerup", e => {
@@ -76,6 +72,11 @@
     pressed = false;
     window.pet.send("pet:pointer", { type: "up", x: e.screenX, y: e.screenY });
   });
+  // 놓는 신호를 놓치면(포인터 캡처가 풀림) 펫 창이 계속 클릭을 가로채므로 놓은 것으로 처리한다.
+  const cancel = e => { if (!pressed) return; pressed = false; window.pet.send("pet:pointer", { type: "up", x: e.screenX, y: e.screenY }); };
+  cv.addEventListener("lostpointercapture", cancel);
+  window.addEventListener("pointercancel", cancel);
+  window.addEventListener("blur", () => { if (pressed) cancel({ screenX: 0, screenY: 0 }); });
   window.addEventListener("contextmenu", e => { e.preventDefault(); if (hitAt(e.clientX, e.clientY)) window.pet.send("pet:context", {}); });
 
   const HEART = [".oo.oo.", "o22o12o", "o22222o", ".o222o.", "..o2o..", "...o..."];

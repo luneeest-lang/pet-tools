@@ -205,6 +205,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
       body = { x: (f.x1 + f.x2) / 2, y: f.y - 200, vx: 0, vy: 0, state: "air", floorId: null };
       setMode("fall", Infinity);
     },
+    getFrame: () => ({ key: lastKey, flip: !!lastFlip }),
     getBody: () => ({ ...body }),
     getMode: () => mode,
     getPet: () => pet,

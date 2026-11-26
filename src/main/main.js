@@ -9,12 +9,14 @@ const { bubbleText, STRINGS } = require("./i18n.js");
 const { createTray } = require("./tray.js");
 const { openSettings } = require("./settingsWindow.js");
 const diag = require("./diagnostics.js");
+const { hitTest } = require("./hitTest.js");
 
 const FPS = 30, SAVE_EVERY_MS = 5000;
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
-const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [] };
+const state = { win: null, controller: null, tray: null, data: null, file: null, lang: "en", hidden: false, debug: false, hooks: [],
+  frames: {}, lastHit: null, pointerDown: false };
 process.on("uncaughtException", e => diag.log("uncaught", e.stack || String(e)));
 process.on("unhandledRejection", e => diag.log("unhandled", (e && e.stack) || String(e)));
 
@@ -24,16 +26,33 @@ function sendFrames() {
   const pet = state.controller.getPet();
   const frames = {};
   for (const [key, fr] of renderAllFrames(pet.spec)) frames[key] = { px: fr.px, shadow: fr.shadow };
-  state.win.webContents.send("pet:frames", { frames, scale: state.data.settings.scale });
+  state.frames = frames;
+  state.win.webContents.send("pet:frames", { frames, scale: state.controller.getSave().settings.scale });
 }
 
 function save() {
   try { writeSave(state.file, state.controller.getSave()); } catch (e) { state.hooks.forEach(h => h("save-error", e)); }
 }
 
+// 커서가 펫 그림 위에 있을 때만 창이 클릭을 받는다. Windows의 마우스 이동 전달에 기대지 않고
+// 매 틱 커서 위치를 직접 읽는다(창을 숨겼다 보이거나 화면 밖에 나갔다 와도 굳지 않게).
+function updateHit() {
+  if (!state.win || state.win.isDestroyed()) return;
+  const f = state.controller.getFrame();
+  const hit = state.pointerDown || (!state.hidden && hitTest({
+    frames: state.frames, key: f.key, flip: f.flip, scale: state.controller.getSave().settings.scale,
+    win: state.win.getBounds(), cursor: screen.getCursorScreenPoint()
+  }));
+  if (hit === state.lastHit) return;
+  state.lastHit = hit;
+  state.win.setIgnoreMouseEvents(!hit, { forward: true });
+  state.controller.hover(hit && !state.pointerDown);
+}
+
 function toggleHidden() {
   state.hidden = !state.hidden;
   if (state.hidden) state.win.hide(); else state.win.showInactive();
+  state.lastHit = null; // 다시 보일 때 클릭 통과 설정을 새로 건다
   diag.log("hidden", state.hidden);
 }
 
@@ -55,9 +74,8 @@ function start() {
   });
 
   ipcMain.on("pet:ready", () => sendFrames());
-  ipcMain.on("pet:hit", (_e, hit) => state.win.setIgnoreMouseEvents(!hit, { forward: true }));
-  ipcMain.on("pet:hover", (_e, over) => state.controller.hover(over));
   ipcMain.on("pet:pointer", (_e, p) => {
+    state.pointerDown = p.type !== "up";
     if (p.type === "down") state.controller.grab(p.x, p.y, Date.now());
     else if (p.type === "move") state.controller.drag(p.x, p.y);
     else state.controller.release(p.x, p.y, Date.now());
@@ -110,6 +128,7 @@ function start() {
     const dt = (mono - last) / 1000;
     last = mono;
     state.controller.tick(dt, Date.now());
+    updateHit();
   }, 1000 / FPS);
   setInterval(save, SAVE_EVERY_MS);
   state.hooks.forEach(h => h("started"));
