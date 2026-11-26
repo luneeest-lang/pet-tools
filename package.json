@@ -42,7 +42,13 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "Pet Tools"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/koffi/**"
+    ]
   },
-  "author": "luneeest-lang"
+  "author": "luneeest-lang",
+  "dependencies": {
+    "koffi": "^3.3.8"
+  }
 }
