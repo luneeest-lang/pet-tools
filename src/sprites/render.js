@@ -13,7 +13,7 @@ const EYE_SAD_DARK = ["KKKKK", "KHHIK", "KIISK", ".KKK."];
 const CAT_EYE_X = [-7, 1], EYE_Y = -3, NOSE_DY = 1;
 const STAMP_KEYS = { K: "K", H: "H", S: "S", I: "IR", J: "IR2", N: "N", n: "NH", Q: "Q", P: "P", D: "PD" };
 
-function paintBody(parts) {
+function paintBody(parts, light = LIGHT) {
   const N = GW * GH;
   const id = new Int16Array(N).fill(-1);
   const ramp = new Array(N).fill(null);
@@ -25,7 +25,7 @@ function paintBody(parts) {
       const k = y * GW + x;
       id[k] = i;
       const [nx, ny] = normal(x, y, p.s);
-      const v = nx * LIGHT[0] + ny * LIGHT[1];
+      const v = nx * light[0] + ny * light[1];
       const r = Math.hypot(nx, ny);
       vv[k] = v;
       let t = v > 0.5 ? 1 : v > -0.28 ? 2 : 3;
@@ -163,14 +163,27 @@ function paintFace(px, B, head, face, darkCoat) {
 // 색 키 배열(px)까지만 만든다. 새 동작 그림의 테스트에서 키를 직접 볼 수 있게 따로 둔다.
 function renderKeys(spec, pose, frame, flags) {
   flags = flags || {};
-  const { parts, head, shadow, traits, face, flip } = buildParts(spec, pose, frame, flags);
+  const { parts, head, shadow, traits, face, flip, vflip, shiftY } = buildParts(spec, pose, frame, flags);
   parts.forEach((p, i) => { p._o = i; });
   parts.sort((a, b) => a.z - b.z || a._o - b._o);
-  const painted = paintBody(parts);
+  const painted = paintBody(parts, vflip ? [LIGHT[0], -LIGHT[1]] : LIGHT);
   const { r2, t2 } = shadeContacts(parts, painted);
   const px = outline(painted.id, r2, t2);
   paintFace(px, traits, head, face || faceOf(pose, flags), isDarkCoat(spec));
-  return { px: flip ? mirror(px) : px, shadowShape: shadow, flip };
+  let out = flip ? mirror(px) : px;
+  if (vflip) out = flipVertical(out, shiftY);
+  return { px: out, shadowShape: shadow, flip };
+}
+
+// 위아래로 뒤집은 뒤 shiftY칸 아래로 내린다(격자 밖은 버린다).
+function flipVertical(arr, shiftY) {
+  const out = new Array(arr.length).fill(null);
+  for (let y = 0; y < GH; y++) {
+    const ny = GH - 1 - y + shiftY;
+    if (ny < 0 || ny >= GH) continue;
+    for (let x = 0; x < GW; x++) out[ny * GW + x] = arr[y * GW + x];
+  }
+  return out;
 }
 
 function mirror(arr) {

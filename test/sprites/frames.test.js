@@ -46,3 +46,34 @@ test("falling and landing never show a tongue or an open mouth", () => {
     assert.ok(!px.includes("P") && !px.includes("PD"), `${p.id} ${pose}`);
   }
 });
+
+test("rolling over shows the whole pet upside down with paws up", () => {
+  for (const id of ["shiba", "cheese"]) {
+    const spec = PRESETS.find(p => p.id === id).spec;
+    const { px } = renderKeys(spec, "roll", 0, {});
+    const rowOf = key => { const ys = []; px.forEach((k, i) => { if (k === key) ys.push(Math.floor(i / 48)); }); return ys; };
+    const nose = rowOf(id === "shiba" ? "N" : "Q"), eyes = rowOf("K").filter(y => y > 15);
+    // 거꾸로 된 얼굴: 코가 눈보다 위에 있다
+    assert.ok(Math.max(...nose) < Math.min(...eyes), `${id}: nose rows ${nose} eyes rows ${eyes}`);
+    // 발(양말 칸이 있는 아래쪽 다리)이 몸보다 위쪽 절반에 있다
+    const painted = px.map((k, i) => (k ? Math.floor(i / 48) : 99)).filter(y => y < 99);
+    assert.ok(Math.min(...painted) < 22, `${id}: top painted row ${Math.min(...painted)}`);
+  }
+});
+
+test("a held pet hangs with its legs stretched down below its body", () => {
+  for (const id of ["shiba", "cheese"]) {
+    const { px } = renderKeys(PRESETS.find(p => p.id === id).spec, "held", 0, {});
+    const rows = px.map((k, i) => (k ? Math.floor(i / 48) : -1)).filter(y => y >= 0);
+    const top = Math.min(...rows), bottom = Math.max(...rows);
+    assert.ok(bottom - top >= 36, `${id}: hanging height ${bottom - top}`);
+    // 몸 아래로 다리만 보이는 줄(따로 떨어진 다리가 2개 이상)이 7줄 이상 이어진다
+    let legRows = 0;
+    for (let y = bottom; y > top; y--) {
+      const row = px.slice(y * 48, y * 48 + 48).map(Boolean);
+      const runs = row.reduce((n, on, i) => n + (on && !row[i - 1] ? 1 : 0), 0);
+      if (runs >= 2) legRows++; else break;
+    }
+    assert.ok(legRows >= 7, `${id}: rows of dangling legs ${legRows}`);
+  }
+});

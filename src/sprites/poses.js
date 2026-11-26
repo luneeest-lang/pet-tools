@@ -188,22 +188,22 @@ const POSE_EXTRA = {
     return { ...r, face: { eyes: "open", mouth: "o" } };
   },
   held: (B, f, flags, add) => {
+    // 목덜미를 잡힌 모습: 몸이 세로로 길게 늘어지고 네 다리가 아래로 쭉 뻗는다
     const dog = B.species === "dog";
-    const sw = f === 1 ? 1 : 0;
+    const sw = f === 1 ? 0.7 : -0.7;
     if (dog) {
-      if (B.tail === "curl") add({ g: "tail", z: 0, s: { cx: 14, cy: 31, rx: 4.2, ry: 4 }, cream: [{ cx: 14.7, cy: 31.8, rx: 2, ry: 1.9 }] });
-      else add({ g: "tail", z: 0, s: { cx: 14, cy: 32, rx: 3.4, ry: 5, fluff: 0.13, lobes: 7 } });
+      if (B.tail === "curl") add({ g: "tail", z: 0, s: { cx: 15, cy: 33, rx: 3.8, ry: 3.6 }, cream: [{ cx: 15.6, cy: 33.7, rx: 1.8, ry: 1.7 }] });
+      else add({ g: "tail", z: 0, s: { cx: 15.5 - sw, cy: 34, rx: 2.8, ry: 5, fluff: 0.13, lobes: 7 } });
     } else {
-      add(catTail(t => [16 - 3 * t + sw * t, 31 + 7 * t, 2.2 - 0.5 * t], 8, 0, B));
+      add(catTail(t => [17 - 2 * t - sw * t, 31 + 8 * t, 2 - 0.5 * t], 8, 0, B));
     }
-    // 목덜미를 잡힌 모습: 몸이 세로로 늘어지고 네 다리가 아래로 대롱거린다
-    const lr = dog ? 2.4 : 2;
-    add({ g: "legF", z: 1, s: leg(20, 35 + sw, lr, 4.2), dark: true, sock: B.socks });
-    add({ g: "legF", z: 1, s: leg(26.5, 34.5 - sw, lr, 4.2), dark: true, sock: B.socks });
-    add({ g: "body", z: 2, s: { cx: 23, cy: 28, rx: 6.6, ry: 8.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 24.5, cy: 30.5, rx: 3.8, ry: 5.5 }] : [] });
-    add({ g: "legN", z: 3, s: leg(18.5, 35.5 - sw, lr, 4.2), sock: B.socks });
-    add({ g: "legN2", z: 3.1, s: leg(28, 35 + sw, lr, 4.2), sock: B.socks });
-    const head = headParts(B, 26, 16, add, { earTip: 1 });
+    const lr = dog ? 2.1 : 1.8;
+    add({ g: "legF", z: 1, s: leg(19 - sw * 0.5, 34.6, lr, 4.9), dark: true, sock: B.socks });
+    add({ g: "legF", z: 1, s: leg(27.5 + sw * 0.5, 34.2, lr, 5.1), dark: true, sock: B.socks });
+    add({ g: "body", z: 2, s: { cx: 23, cy: 23.5, rx: 6, ry: 7.6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 24.3, cy: 25.5, rx: 3.4, ry: 5 }] : [] });
+    add({ g: "legN", z: 3, s: leg(17.5 + sw * 0.5, 34.8, lr, 4.9), sock: B.socks });
+    add({ g: "legN2", z: 3.1, s: leg(29 - sw * 0.5, 34.4, lr, 5.1), sock: B.socks });
+    const head = headParts(B, 25.5, 13.5, add, { earTip: 1 });
     return { head, shadow: { cx: 24, cy: 38.8, rx: 0.1, ry: 0.1 } };
   },
   lookdown: (B, f, flags, add) => sitParts(B, 0, {}, add, { headDx: 2, headDy: 2.5, earTip: 1 }),
@@ -226,23 +226,13 @@ const POSE_EXTRA = {
     const head = headParts(B, 34, 23, add, { earTip: 1 });
     return { head, shadow: { cx: 22, cy: 38.6, rx: 16, ry: 1.6 }, face: { eyes: "closed", mouth: "smile" } };
   },
+  // 뒹굴기: 머리를 몸 옆으로 내린 서 있는 모습을 그린 뒤 통째로 위아래 뒤집는다.
+  // 얼굴도 거꾸로 돌아가고 네 다리가 하늘을 향한다. 빛 방향도 뒤집어 그려서 뒤집은 뒤 위쪽이 밝다.
   roll: (B, f, flags, add) => {
-    const dog = B.species === "dog";
-    const w = f === 1 ? 1 : -1;
-    const lr = dog ? 2.6 : 2.1;
-    add({ g: "legF", z: 1, s: leg(17 - w * 0.6, 23 + w * 0.5, lr, 3.8), dark: true, sock: B.socks });
-    add({ g: "legF", z: 1, s: leg(27 + w * 0.6, 23 - w * 0.5, lr, 3.8), dark: true, sock: B.socks });
-    add({ g: "body", z: 2, s: { cx: 22, cy: 32.5, rx: 12, ry: 6, fluff: B.fluffy ? 0.05 : 0, lobes: 11 }, rim: true, cream: B.belly ? [{ cx: 22, cy: 29.5, rx: 8, ry: 3 }] : [] });
-    if (dog) {
-      if (B.tail === "curl") add({ g: "tail", z: 2.6, s: { cx: 9.5, cy: 34, rx: 4, ry: 3.8 }, cream: [{ cx: 10.2, cy: 34.7, rx: 1.9, ry: 1.8 }] });
-      else add({ g: "tail", z: 2.6, s: { cx: 9, cy: 35, rx: 4.8, ry: 3, fluff: 0.13, lobes: 7 } });
-    } else {
-      add(catTail(t => [11 - 6 * t, 36 - 2 * t + w * t, 2.1 - 0.4 * t], 8, 2.6, B));
-    }
-    add({ g: "legN", z: 3, s: leg(14.5 + w * 0.6, 23.5 - w * 0.5, lr, 3.8), sock: B.socks });
-    add({ g: "legN2", z: 3.1, s: leg(24.5 - w * 0.6, 23.2 + w * 0.5, lr, 3.8), sock: B.socks });
-    const head = headParts(B, 33.5, 29, add, { earTip: 1 });
-    return { head, shadow: { cx: 23, cy: 38.8, rx: 17, ry: 1.5 }, face: { eyes: "happy", mouth: "smile", tongue: true } };
+    const w = f === 1 ? 0.8 : -0.8;
+    const r = standParts(B, add, { headDy: B.species === "dog" ? 11 : 10.5, headDx: 1.5, earTip: 1, tailDy: 6, tailDx: 1, sway: w,
+      legs: [{ dx: -w, dy: 1.6, ry: 5.2 }, { dx: w, dy: 1.6, ry: 5.2 }, { dx: w, dy: 1.4, ry: 5.4 }, { dx: -w, dy: 1.4, ry: 5.4 }] });
+    return { head: r.head, shadow: { cx: 23, cy: 38.8, rx: 16, ry: 1.5 }, vflip: true, shiftY: 15, face: { eyes: "happy", mouth: "smile", tongue: true } };
   },
   // 꼬리 잡기: 서 있기와 웅크리기를 좌우로 뒤집어 가며 제자리에서 도는 것처럼 보이게 한다.
   chase: (B, f, flags, add) => {
@@ -263,8 +253,8 @@ function buildParts(spec, pose, f, flags) {
   const builder = POSE_BUILDERS[pose];
   if (!builder) throw new Error(`unknown pose: ${pose}`);
   const parts = [];
-  const { head, shadow, face, flip } = builder(B, f, flags || {}, p => parts.push(p));
-  return { parts, head, shadow, face, flip: !!flip, traits: B };
+  const { head, shadow, face, flip, vflip, shiftY } = builder(B, f, flags || {}, p => parts.push(p));
+  return { parts, head, shadow, face, flip: !!flip, vflip: !!vflip, shiftY: shiftY || 0, traits: B };
 }
 
 module.exports = { traitsOf, buildParts, POSE_BUILDERS, headParts, catTail, walkPhase, leg };
