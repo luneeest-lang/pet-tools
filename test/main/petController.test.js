@@ -125,3 +125,15 @@ test("time the computer spent asleep counts like time the app was closed", () =>
   assert.strictEqual(s.full, 40);
   assert.strictEqual(s.mood, 40);
 });
+
+test("releasing the pet over the taskbar lands it on the taskbar, not off screen", () => {
+  const { c, run, at } = setup();
+  run(0.3);
+  const b = c.getBody();
+  c.grab(b.x, b.y - 20, at());
+  c.drag(b.x + 30, 1070, at());
+  c.release(b.x + 30, 1070, at());
+  run(2);
+  assert.strictEqual(c.getBody().state, "ground");
+  assert.strictEqual(c.getBody().y, 1040);
+});

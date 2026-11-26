@@ -1,5 +1,5 @@
 // 낙하와 착지. body.x = 발 가운데, body.y = 발 바닥(화면 좌표, 아래로 갈수록 커짐).
-const { clampToDisplays, inArea } = require("./floors.js");
+const { clampToDisplays, inArea, floorBelow } = require("./floors.js");
 const GRAVITY = 2400, MAX_FALL = 1400;
 
 function stepBody(body, dt, floors) {
@@ -24,7 +24,7 @@ function relocate(body, floors, displays) {
       if (f.y > body.y) return { ...body, state: "air", vx: 0, vy: 0, floorId: null }; // 바닥이 내려감: 떨어진다
       return { ...body, y: f.y };                                                   // 바닥이 올라옴: 올라선다
     }
-  } else if (onScreen) return body;
+  } else if (onScreen && floorBelow(body.x, body.y, floors)) return body; // 아래에 바닥이 있으면 그대로 떨어진다
   const p = clampToDisplays(body, displays);
   return { x: p.x, y: p.y, vx: 0, vy: 0, state: "air", floorId: null };
 }

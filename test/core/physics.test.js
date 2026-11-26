@@ -71,3 +71,11 @@ test("when the floor moves up on the same display, the pet snaps onto it", () =>
   assert.strictEqual(b.state, "ground");
   assert.strictEqual(b.y, 1040);
 });
+
+test("a pet dropped over the taskbar (below the floor) is put back on the floor instead of falling forever", () => {
+  const floors = groundFloors(ONE);
+  let body = relocate({ x: 500, y: 1065, vx: 0, vy: 0, state: "air", floorId: null }, floors, ONE);
+  for (let i = 0; i < 300 && body.state === "air"; i++) body = stepBody(body, 1 / 30, floors).body;
+  assert.strictEqual(body.state, "ground");
+  assert.strictEqual(body.y, 1040);
+});
