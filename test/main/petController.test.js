@@ -221,3 +221,84 @@ test("with perching turned off, a pet dropped over a window falls to the taskbar
   run(2);
   assert.strictEqual(c.getBody().y, 1040);
 });
+
+const keysAfter = (log, from) => log.frames.slice(from).map(f => f.key);
+const inOrder = (keys, seq) => { let i = -1; for (const k of seq) { i = keys.findIndex((x, j) => j > i && (k instanceof RegExp ? k.test(x) : x === k)); if (i < 0) return false; } return true; };
+
+test("on the ground the pet eventually jumps up onto a nearby window", () => {
+  const { c, log, run } = setup({ rng: () => 0.45 });
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(240, 1 / 15);
+  const keys = keysAfter(log, 0);
+  assert.ok(inOrder(keys, ["crouch:0:", "air:0:", "air:1:", "land:0:"]), "jump sequence");
+  for (const k of keys) assert.ok(KEYS.has(k), k);
+});
+
+test("after a while on a window the pet looks down and then hops off", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.45 });
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(0.3);
+  dropOn(c, at, 700, 500);
+  run(1.5);
+  assert.ok(c.getBody().floorId.startsWith("win:"));
+  const from = log.frames.length;
+  run(200, 1 / 15);
+  const keys = keysAfter(log, from);
+  assert.ok(inOrder(keys, ["lookdown:0:", /^air:/, "land:0:"]), keys.slice(0, 40).join(" "));
+});
+
+test("hanging from the edge puts the front paws on the window top, then it drops", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.7 });
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(0.3);
+  dropOn(c, at, 700, 500);
+  run(1.5);
+  let sawHang = false;
+  for (let i = 0; i < 200 * 15; i++) {
+    run(1 / 15, 1 / 15);
+    if (c.getMode() === "hang") { sawHang = true; assert.strictEqual(c.getBody().y, 600 + 17 * 3); }
+  }
+  assert.ok(sawHang, "hung from the edge");
+  assert.ok(log.frames.some(f => f.key.startsWith("held:")));
+  assert.strictEqual(c.getBody().y, 1040);
+});
+
+test("after hanging, the pet can climb back up onto the window", () => {
+  let c;
+  const s = setup({ rng: () => (c && c.getMode() === "hang" ? 0.3 : 0.7) });
+  c = s.c;
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  s.run(0.3);
+  dropOn(c, s.at, 700, 500);
+  s.run(1.5);
+  let climbed = false, hung = false;
+  for (let i = 0; i < 200 * 15 && !climbed; i++) {
+    s.run(1 / 15, 1 / 15);
+    if (c.getMode() === "hang") hung = true;
+    if (hung && c.getMode() !== "hang" && c.getMode() !== "climb" && c.getBody().state === "ground") climbed = true;
+  }
+  assert.ok(climbed);
+  assert.strictEqual(c.getBody().y, 600);
+  assert.ok(c.getBody().floorId.startsWith("win:"));
+});
+
+test("with perching off the pet never jumps up or hangs", () => {
+  const { c, log, run } = setup({ rng: () => 0.45 });
+  c.setPerch(false);
+  c.setWindows([WIN(300, 600, 900, 400)]);
+  run(240, 1 / 15);
+  assert.ok(!log.frames.some(f => f.key === "crouch:0:" || f.key.startsWith("held:")));
+});
+
+test("hopping off a very high window falls with the surprised pose and still lands", () => {
+  const { c, log, run, at } = setup({ rng: () => 0.45 });
+  c.setWindows([WIN(300, 150, 900, 400)]);
+  run(0.3);
+  dropOn(c, at, 700, 100);
+  run(1.5);
+  const from = log.frames.length;
+  run(200, 1 / 15);
+  const keys = keysAfter(log, from);
+  assert.ok(inOrder(keys, ["lookdown:0:", "fall:0:", "land:0:"]), keys.slice(0, 40).join(" "));
+  for (const k of keys) assert.ok(KEYS.has(k), k);
+});

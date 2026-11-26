@@ -6,6 +6,8 @@ const { createBrain } = require("../core/brain.js");
 const { groundFloors } = require("../core/floors.js");
 const { windowFloors } = require("../core/windowFloors.js");
 const { stepBody, relocate } = require("../core/physics.js");
+const { jumpVelocity } = require("../core/jump.js");
+const { floorBelow } = require("../core/floors.js");
 
 const WALK_SPEED = 40;            // px/s (크기 3배 기준)
 const CLICK_MOVE = 6, CLICK_MS = 400;
@@ -14,6 +16,11 @@ const HOVER_SECONDS = 0.6;
 const SUSPEND_GAP_MS = 60 * 1000;
 const TRICK_FPS = { stretch: 1.5, roll: 4, chase: 6 };
 const TRICK_FRAMES = { stretch: 2, roll: 2, chase: 4 };
+// 창 위 시간표(설계 6.4절)
+const JUMP_EVERY = [120, 240], STAY_ON_WINDOW = [30, 180], HANG_SECONDS = [3, 6];
+const CROUCH_SECONDS = 0.25, LOOKDOWN_SECONDS = 0.8, CLIMB_SECONDS = 0.3;
+const JUMP_UP_APEX = 40, JUMP_DOWN_APEX = 24;
+const HANG_DROP = 17;   // 매달릴 때 발 선이 창 윗선보다 내려가는 칸 수(앞발이 윗선에 닿게)
 
 function localDay(now) {
   const d = new Date(now);
@@ -41,6 +48,9 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   let pointer = null;             // { downAt, x0, y0, dx, dy, held }
   let hoverSince = null, hoverShown = false;
   let lastKey = null, lastFlip = null, lastWin = null;
+  const between = (a, b) => a + (b - a) * rng();
+  let nextJumpAt = between(...JUMP_EVERY), stayUntil = Infinity;
+  let pending = null, edgeX = null, bigFall = false, climbTo = null;
 
   pet.stats = decay(pet.stats, now, { running: false });
 
@@ -58,9 +68,94 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   function setMode(m, seconds, v = null) { mode = m; until = t + seconds; variant = v; }
 
   function pickNext() {
-    const next = brain.next({ sad: isSad(pet.stats), hour: new Date(clock).getHours(), unlocked: pet.affinity.unlocked, onWindow: false });
+    const next = brain.next({ sad: isSad(pet.stats), hour: new Date(clock).getHours(), unlocked: pet.affinity.unlocked, onWindow: !!windowIdOf(body.floorId) });
+    if (next.state === "walk" && perch && t >= nextJumpAt && floorOf(body.floorId)?.kind === "ground") {
+      nextJumpAt = t + between(...JUMP_EVERY);
+      const target = findJumpTarget();
+      if (target) return startJump(target, JUMP_UP_APEX);
+    }
     setMode(next.state, next.duration, next.variant || null);
     if (next.state === "walk" && rng() < 0.35) dir = -dir;
+  }
+
+  const displayOf = floor => screens.find(d => d.id === (floor && floor.displayId)) || screens[0];
+
+  // 가로 화면 40%, 세로 60% 안에 있는 위쪽 창 바닥 중 가장 가까운 곳
+  function findJumpTarget() {
+    const here = floorOf(body.floorId), d = displayOf(here);
+    let best = null;
+    for (const f of floors) {
+      if (f.kind !== "window") continue;
+      const rise = body.y - f.y;
+      if (rise < 40 || rise > 0.6 * d.bounds.height) continue;
+      const wide = f.x2 - f.x1 >= 2 * halfW();
+      const x = wide ? Math.min(Math.max(body.x, f.x1 + halfW()), f.x2 - halfW()) : (f.x1 + f.x2) / 2;
+      const dist = Math.abs(x - body.x);
+      if (dist > 0.4 * d.bounds.width) continue;
+      if (!best || dist < best.dist) best = { x, y: f.y, dist };
+    }
+    return best && { x: best.x, y: best.y };
+  }
+
+  function startJump(to, apex) {
+    if (to.x !== body.x) dir = to.x > body.x ? 1 : -1;
+    pending = { to, apex };
+    setMode("crouch", CROUCH_SECONDS);
+  }
+
+  function launch() {
+    const d = displayOf(floorOf(body.floorId));
+    const v = jumpVelocity(body, pending.to, pending.apex);
+    bigFall = pending.to.y - body.y > 0.5 * d.bounds.height;
+    body = { ...body, state: "air", vx: v.vx, vy: v.vy, floorId: null };
+    pending = null;
+    setMode("jump", Infinity);
+  }
+
+  // 창 위에서 내려갈 때: 가까운 끝으로 걸어간다.
+  function goEdge() {
+    const f = floorOf(body.floorId);
+    const left = body.x - f.x1 < f.x2 - body.x;
+    dir = left ? -1 : 1;
+    edgeX = left ? f.x1 + halfW() * 0.4 : f.x2 - halfW() * 0.4;
+    setMode("toEdge", 20);
+  }
+
+  function jumpDown() {
+    const f = floorOf(body.floorId), d = displayOf(f), wa = d.workArea;
+    let tx = dir > 0 ? f.x2 + 30 * scale : f.x1 - 30 * scale;
+    tx = Math.min(Math.max(tx, wa.x + halfW()), wa.x + wa.width - halfW());
+    const below = floorBelow(tx, f.y + 1, floors) || floors.find(fl => fl.kind === "ground" && fl.displayId === d.id);
+    startJump({ x: tx, y: below.y }, JUMP_DOWN_APEX);
+  }
+
+  function hang() {
+    const f = floorOf(body.floorId);
+    const x = dir > 0 ? f.x2 - 8 * scale : f.x1 + 8 * scale;
+    body = { x, y: f.y + HANG_DROP * scale, vx: 0, vy: 0, state: "hang", floorId: f.id };
+    setMode("hang", between(...HANG_SECONDS));
+  }
+
+  function afterHang() {
+    const f = floorOf(body.floorId);
+    if (f && rng() < 0.6) {
+      const inward = dir > 0 ? f.x2 - halfW() : f.x1 + halfW();
+      climbTo = { x: Math.min(Math.max(inward, f.x1), f.x2), y: f.y, floorId: f.id };
+      setMode("climb", CLIMB_SECONDS);
+      return;
+    }
+    const d = displayOf(f), ground = floorBelow(body.x, body.y, floors);
+    bigFall = !!ground && ground.y - body.y > 0.5 * d.bounds.height;
+    body = { ...body, state: "air", vx: 0, vy: 0, floorId: null };
+    setMode("jump", Infinity);
+  }
+
+  // 특별한 동작이 끝났을 때 다음으로 넘어가기
+  function advance() {
+    if (mode === "crouch" && pending) return launch();
+    if (mode === "lookdown") return rng() < 0.6 ? jumpDown() : hang();
+    if (mode === "toEdge") return setMode("lookdown", LOOKDOWN_SECONDS);
+    pickNext();
   }
 
   function care(kind) {
@@ -103,18 +198,27 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   // 펫이 서 있는 창이 움직이면 같이 움직이고, 그 자리가 사라지면 떨어진다.
   function followWindow(prevWins) {
     const winId = windowIdOf(body.floorId);
-    if (!winId || body.state !== "ground") return;
+    if (!winId || (body.state !== "ground" && body.state !== "hang")) return;
     const before = prevWins.find(w => w.id === winId), now = wins.find(w => w.id === winId);
     if (!before || !now || !perch) return fallNow();
+    const lift = body.state === "hang" ? HANG_DROP * scale : 0;
     const x = body.x + (now.x - before.x), y = body.y + (now.y - before.y);
-    const spot = floors.find(f => f.windowId === winId && Math.abs(f.y - y) <= 1 && x >= f.x1 && x <= f.x2);
-    if (!spot) { body = { ...body, x, y }; return fallNow(); }
-    body = { ...body, x, y: spot.y, floorId: spot.id };
+    const spot = floors.find(f => f.windowId === winId && Math.abs(f.y - (y - lift)) <= 1 && x >= f.x1 && x <= f.x2);
+    if (!spot) { body = { ...body, x, y, state: "air" }; return fallNow(); }
+    body = { ...body, x, y: spot.y + lift, floorId: spot.id };
+    if (climbTo) climbTo = { ...climbTo, x: climbTo.x + (now.x - before.x), y: spot.y, floorId: spot.id };
   }
 
   function frameKey() {
     if (mode === "held") return `held:${Math.floor(t * 4) % 2}:`;
-    if (body.state === "air") return "fall:0:";
+    if (body.state === "hang") return mode === "climb" ? "crouch:0:" : `held:${Math.floor(t * 4) % 2}:`;
+    if (body.state === "air") {
+      if (mode === "jump") return body.vy < 0 ? "air:0:" : bigFall ? "fall:0:" : "air:1:";
+      return "fall:0:";
+    }
+    if (mode === "crouch") return "crouch:0:";
+    if (mode === "lookdown") return "lookdown:0:";
+    if (mode === "toEdge") return `walk:${Math.floor(t * 9) % 6}:`;
     if (mode === "land") return "land:0:";
     if (mode === "walk") return `walk:${Math.floor(t * 9) % 6}:`;
     if (mode === "sleep") return `sleep:${Math.floor(t * 0.9) % 2}:`;
@@ -155,10 +259,34 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
       if (body.state === "air") {
         const r = stepBody(body, dt, floors);
         body = r.body;
-        if (r.landed) setMode("land", LAND_SECONDS);
+        if (r.landed) {
+          setMode("land", LAND_SECONDS);
+          bigFall = false;
+          stayUntil = floorOf(body.floorId)?.kind === "window" ? t + between(...STAY_ON_WINDOW) : Infinity;
+        }
+      } else if (body.state === "hang") {
+        if (t >= until) {
+          if (mode === "hang") afterHang();
+          else if (mode === "climb") {
+            body = { x: climbTo.x, y: climbTo.y, vx: 0, vy: 0, state: "ground", floorId: climbTo.floorId };
+            climbTo = null;
+            stayUntil = t + between(...STAY_ON_WINDOW);
+            setMode("sit", 2);
+          }
+        }
       } else {
         if (mode === "walk") walk(dt);
-        if (t >= until) pickNext();
+        if (mode === "toEdge") {
+          const x = body.x + dir * WALK_SPEED * (scale / 3) * dt;
+          const reached = dir > 0 ? x >= edgeX : x <= edgeX;
+          body = { ...body, x: reached ? edgeX : x };
+          if (reached) setMode("lookdown", LOOKDOWN_SECONDS);
+        }
+        const special = ["crouch", "toEdge", "lookdown", "land"].includes(mode);
+        if (!special && mode !== "sleep" && perch && t >= stayUntil && floorOf(body.floorId)?.kind === "window") {
+          stayUntil = Infinity;
+          goEdge();
+        } else if (t >= until) advance();
       }
     }
     if (hoverSince !== null && !hoverShown && t - hoverSince >= HOVER_SECONDS) {
