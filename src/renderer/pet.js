@@ -97,8 +97,9 @@
     const el = document.createElement("div");
     el.className = "bubble" + (b.kind === "info" ? " info" : "");
     el.textContent = b.text;
-    el.style.top = Math.max(0, oy - 28) + "px";
     layer.appendChild(el);
+    // 여러 줄 말풍선도 펫 머리 위에, 창 안에 들어오게 놓는다.
+    el.style.top = Math.max(2, oy - el.offsetHeight - 4) + "px";
     setTimeout(() => el.remove(), b.kind === "info" ? 3100 : 1900);
     for (let i = 0; i < (b.hearts || 0); i++) {
       const h = pixelCanvas(HEART, { o: "#7a1830", "1": "#ffd0dc", "2": "#ff5a7e" }, 3);

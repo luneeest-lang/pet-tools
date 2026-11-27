@@ -9,7 +9,9 @@
   #layer { position: absolute; inset: 0; pointer-events: none; font: 13px "Malgun Gothic", "Segoe UI", sans-serif; }
   .bubble { position: absolute; left: 50%; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: #fff; color: #1c2030;
     white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); animation: pop 1.8s ease-out forwards; }
-  .bubble.info { animation-duration: 3s; }
+  .bubble { max-width: calc(100% - 8px); width: max-content; white-space: normal; text-align: center; line-height: 1.35; overflow-wrap: anywhere; }
+  .bubble.info { animation-duration: 3s; white-space: pre-line; }
+  .bubble.info::first-line { font-weight: 700; }
   @keyframes pop { 0% { opacity: 0; transform: translate(-50%, 6px); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; } 100% { opacity: 0; } }
   .heart { position: absolute; image-rendering: pixelated; animation: float 1.3s ease-out forwards; }
   @keyframes float { from { opacity: 1; transform: translate(0, 0); } to { opacity: 0; transform: translate(var(--dx), -60px); } }

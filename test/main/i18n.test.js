@@ -41,3 +41,14 @@ test("the two new settings have Korean and English labels", () => {
     assert.ok(STRINGS.ko[k] && STRINGS.en[k], k);
   }
 });
+
+test("the hover info fits the pet window: name on its own line, short lines", () => {
+  const { bubbleText } = require("../../src/main/i18n.js");
+  for (const lang of ["ko", "en"]) {
+    const text = bubbleText({ kind: "info", name: "Bori", full: 100, mood: 100, affinity: 150 }, lang);
+    const lines = text.split("\n");
+    assert.strictEqual(lines[0], "Bori");
+    assert.ok(lines.length >= 2);
+    for (const l of lines) assert.ok(l.length <= 22, `${lang}: "${l}" (${l.length})`);
+  }
+});
