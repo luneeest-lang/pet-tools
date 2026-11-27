@@ -43,11 +43,14 @@ function save() {
 function updateHit() {
   if (!state.win || state.win.isDestroyed()) return;
   const f = state.controller.getFrame();
-  const hit = state.pointerDown || (!state.hidden && hitTest({
+  const hit = state.pointerDown || (!state.hidden && !state.fullscreenHidden && hitTest({
     frames: state.frames, key: f.key, flip: f.flip, px: state.controller.getGeometry().px,
     win: state.win.getBounds(), cursor: screen.getCursorScreenPoint()
   }));
-  if (hit === state.lastHit) return;
+  if (hit === state.lastHit && Date.now() - (state.lastHitApplied || 0) < 2000) return;
+  // 같은 값이어도 2초마다 다시 걸어서, Windows 쪽 설정이 꼬여도 저절로 풀리게 한다.
+  state.lastHitApplied = Date.now();
+  if (hit === state.lastHit) { state.win.setIgnoreMouseEvents(!hit, { forward: true }); return; }
   state.lastHit = hit;
   if (state.debug) diag.log("hit", { hit, key: f.key, cursor: screen.getCursorScreenPoint(), win: state.win.getBounds(), px: state.controller.getGeometry().px });
   state.win.setIgnoreMouseEvents(!hit, { forward: true });
@@ -57,8 +60,9 @@ function updateHit() {
 // 사용자가 숨겼거나, 전체 화면 앱이 앞에 있으면 숨긴다.
 function applyVisibility() {
   const hide = state.hidden || state.fullscreenHidden;
-  if (hide && state.win.isVisible()) state.win.hide();
-  if (!hide && !state.win.isVisible()) state.win.showInactive();
+  // 창을 숨겼다 다시 띄우면 Windows에서 클릭 통과 설정이 꼬일 수 있어, 창은 띄운 채로 투명하게만 만든다.
+  state.win.setOpacity(hide ? 0 : 1);
+  if (!state.win.isVisible()) state.win.showInactive();
   state.lastHit = null; // 다시 보일 때 클릭 통과 설정을 새로 건다
 }
 

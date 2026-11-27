@@ -66,7 +66,8 @@
   });
   window.addEventListener("mouseleave", () => { mouse = null; });
   window.addEventListener("pointerdown", e => {
-    if (e.button !== 0 || !hitAt(e.clientX, e.clientY)) return;
+    // 클릭을 받을지는 메인 프로세스가 커서 위치로 정한다(창이 클릭을 받고 있다면 펫 위를 누른 것).
+    if (e.button !== 0) return;
     pressed = true; cv.setPointerCapture(e.pointerId);
     window.pet.send("pet:pointer", { type: "down", x: e.screenX, y: e.screenY });
   });
@@ -80,7 +81,7 @@
   cv.addEventListener("lostpointercapture", cancel);
   window.addEventListener("pointercancel", cancel);
   window.addEventListener("blur", () => { if (pressed) cancel({ screenX: 0, screenY: 0 }); });
-  window.addEventListener("contextmenu", e => { e.preventDefault(); if (hitAt(e.clientX, e.clientY)) window.pet.send("pet:context", {}); });
+  window.addEventListener("contextmenu", e => { e.preventDefault(); window.pet.send("pet:context", {}); });
 
   const HEART = [".oo.oo.", "o22o12o", "o22222o", ".o222o.", "..o2o..", "...o..."];
   const BOWL = ["......oooooo......", "....oo4544544oo...", "...o445445445544o.", "..oooooooooooooooo", "..o11111111111111o", "..o12222222222221o", "...o122222222221o.", "....o1222222221o..", ".....oooooooooo..."];
