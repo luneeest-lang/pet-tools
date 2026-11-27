@@ -15,3 +15,13 @@ node prototype/build-preview.js
 ```
 
 `prototype/preview/index.html`을 브라우저로 열면 됩니다.
+
+## AI로 만든 그림 묶음 가져오기
+
+초록(#00FF00) 배경의 4×4 캐릭터 시트를 `assets/sprite-src/<이름>/`에 두고, 칸과 동작을 잇는 설정을 `tools/packs/<묶음 id>.json`에 적은 뒤 실행합니다.
+
+```bash
+node tools/import-pack.js tools/packs/shiba-gemini.json
+```
+
+결과는 `src/sprites/packs/<묶음 id>.json`(96×80칸)에 저장되고, 추천 조합의 `spec.pack`에 묶음 id를 적으면 그 그림을 씁니다.

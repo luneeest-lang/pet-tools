@@ -1,0 +1,28 @@
+{
+  "id": "shiba-gemini",
+  "cols": 96, "rows": 80, "baseRow": 78,
+  "sourceScale": 3.2,
+  "paletteSize": 28,
+  "paletteFrom": ["s1", "s2"],
+  "sheets": {
+    "s1": { "file": "assets/sprite-src/shiba/sheet1.png", "grid": [4, 4] },
+    "s2": { "file": "assets/sprite-src/shiba/sheet2.png", "grid": [4, 4] },
+    "s3": { "file": "assets/sprite-src/shiba/sheet3.png", "grid": [4, 4] }
+  },
+  "frames": {
+    "walk:0:": ["s1", 0], "walk:1:": ["s1", 1], "walk:2:": ["s1", 2], "walk:3:": ["s1", 3], "walk:4:": ["s1", 4], "walk:5:": ["s1", 5],
+    "sit:0:": ["s1", 6], "sit:1:": ["s1", 7],
+    "sit:0:blink": ["s1", 8],
+    "sit:0:happy": ["s1", 9], "sit:1:happy": ["s1", 9],
+    "sit:0:yawn": ["s1", 10],
+    "sit:0:sad": ["s2", 15], "sit:1:sad": ["s2", 15],
+    "sleep:0:": ["s1", 12], "sleep:1:": ["s1", 13],
+    "lookdown:0:": ["s3", 1],
+    "crouch:0:": ["s1", 15],
+    "air:0:": ["s2", 0], "air:1:": ["s2", 1], "land:0:": ["s2", 2], "fall:0:": ["s2", 3],
+    "held:0:": ["s2", 4], "held:1:": ["s2", 5],
+    "stretch:0:": ["s2", 6], "stretch:1:": ["s2", 7],
+    "roll:0:": ["s2", 8], "roll:1:": ["s2", 9],
+    "chase:0:": ["s2", 11], "chase:1:": ["s3", 11], "chase:2:": ["s2", 11, { "flip": true }], "chase:3:": ["s3", 11, { "flip": true }]
+  }
+}

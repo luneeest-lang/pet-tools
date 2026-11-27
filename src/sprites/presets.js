@@ -1,7 +1,7 @@
 // 추천 조합. 처음 6개는 프로토타입의 손으로 고른 팔레트를 그대로 담는다.
 const PRESETS = [
   { id: "shiba", name: {"ko":"보리","en":"Bori"},
-    spec: {"species":"dog","ears":"pointy","tail":"curl","pattern":["muzzle","belly","socks","brows"],"fluffy":false,"colors":{"main":"#e48b3c","second":"#f3dfc6"},"eye":"#8a4f33","palette":{"F0":"#ffe3a8","F1":"#f9b96d","F2":"#e48b3c","F3":"#bf5f3a","F4":"#853b35","C0":"#ffffff","C1":"#fff7ea","C2":"#f3dfc6","C3":"#d4b39d","C4":"#a3807a","I1":"#f8c9bb","I2":"#df9893","O":"#371a1d","OL":"#6d3530","OC":"#6a4c49","OCL":"#9c7b6e","IR":"#8a4f33","N":"#2a1a1c","NH":"#8a6a6e","MO":"#6b4038"}} },
+    spec: {"pack":"shiba-gemini","species":"dog","ears":"pointy","tail":"curl","pattern":["muzzle","belly","socks","brows"],"fluffy":false,"colors":{"main":"#e48b3c","second":"#f3dfc6"},"eye":"#8a4f33","palette":{"F0":"#ffe3a8","F1":"#f9b96d","F2":"#e48b3c","F3":"#bf5f3a","F4":"#853b35","C0":"#ffffff","C1":"#fff7ea","C2":"#f3dfc6","C3":"#d4b39d","C4":"#a3807a","I1":"#f8c9bb","I2":"#df9893","O":"#371a1d","OL":"#6d3530","OC":"#6a4c49","OCL":"#9c7b6e","IR":"#8a4f33","N":"#2a1a1c","NH":"#8a6a6e","MO":"#6b4038"}} },
   { id: "maltese", name: {"ko":"두부","en":"Tofu"},
     spec: {"species":"dog","ears":"floppy","tail":"plume","pattern":[],"fluffy":true,"colors":{"main":"#f5f1ec","second":null},"eye":"#6a4a42","palette":{"F0":"#ffffff","F1":"#ffffff","F2":"#f5f1ec","F3":"#ddd4d3","F4":"#b4a8b0","C0":"#ffffff","C1":"#ffffff","C2":"#f5f1ec","C3":"#ddd4d3","C4":"#b4a8b0","I1":"#f6d2cf","I2":"#e6b4b3","O":"#5e5260","OL":"#8f8290","OC":"#5e5260","OCL":"#8f8290","IR":"#6a4a42","N":"#241a1e","NH":"#7a6670","MO":"#8a7480"}} },
   { id: "blacktan", name: {"ko":"까미","en":"Kkami"},

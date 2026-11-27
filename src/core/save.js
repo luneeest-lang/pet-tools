@@ -36,6 +36,9 @@ function repairPet(p, now) {
   let spec = isObj(p.spec) && (p.spec.species === "dog" || p.spec.species === "cat") ? p.spec : null;
   if (!spec && p.presetId) { const preset = PRESETS.find(x => x.id === p.presetId); if (preset) spec = JSON.parse(JSON.stringify(preset.spec)); }
   if (!spec) return null;
+  // 입양한 친구의 추천 조합에 새 그림 묶음이 생겼으면 그 그림으로 바꾼다.
+  const preset = p.origin === "adopted" && PRESETS.find(x => x.id === p.presetId);
+  if (preset && preset.spec.pack && spec.pack !== preset.spec.pack) spec = { ...spec, pack: preset.spec.pack };
   const st = isObj(p.stats) ? p.stats : {};
   const aff = isObj(p.affinity) ? p.affinity : {};
   return {

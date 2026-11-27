@@ -3,22 +3,24 @@
   const cv = document.getElementById("pet");
   const ctx = cv.getContext("2d");
   const layer = document.getElementById("layer");
-  let frames = {}, scale = 3, current = null, debug = false;
+  // px: 그림 한 칸의 화면 픽셀, footPad: 발 선 아래 여백(화면 픽셀)
+  let frames = {}, px = 3, footPad = 6, current = null, debug = false;
   const cache = new Map();
 
   function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; draw(); }
-  const origin = () => ({ ox: Math.round((cv.width - 48 * scale) / 2), oy: cv.height - 40 * scale });
+  const frameSize = () => { const fr = current && frames[current.key]; return fr ? { w: fr.w, h: fr.h } : { w: 48, h: 40 }; };
+  const origin = () => { const { w, h } = frameSize(); return { ox: Math.round((cv.width - w * px) / 2), oy: cv.height - h * px }; };
 
   function sprite(key) {
-    const k = key + "@" + scale;
+    const k = key + "@" + px;
     if (cache.has(k)) return cache.get(k);
     const fr = frames[key];
     if (!fr) return null;
     const c = document.createElement("canvas");
-    c.width = 48 * scale; c.height = 40 * scale;
+    c.width = fr.w * px; c.height = fr.h * px;
     const g = c.getContext("2d");
-    fr.shadow.forEach((on, i) => { if (on) { g.fillStyle = "rgba(30,20,40,0.16)"; g.fillRect((i % 48) * scale, Math.floor(i / 48) * scale, scale, scale); } });
-    fr.px.forEach((col, i) => { if (col) { g.fillStyle = col; g.fillRect((i % 48) * scale, Math.floor(i / 48) * scale, scale, scale); } });
+    fr.shadow.forEach((on, i) => { if (on) { g.fillStyle = "rgba(30,20,40,0.16)"; g.fillRect((i % fr.w) * px, Math.floor(i / fr.w) * px, px, px); } });
+    fr.px.forEach((col, i) => { if (col) { g.fillStyle = col; g.fillRect((i % fr.w) * px, Math.floor(i / fr.w) * px, px, px); } });
     cache.set(k, c);
     return c;
   }
@@ -33,11 +35,12 @@
     if (current.flip) { ctx.translate(ox + s.width, oy); ctx.scale(-1, 1); ctx.drawImage(s, 0, 0); }
     else ctx.drawImage(s, ox, oy);
     ctx.restore();
-    if (debug) { ctx.strokeStyle = "#e8466a"; ctx.beginPath(); ctx.moveTo(0, cv.height - 2 * scale + 0.5); ctx.lineTo(cv.width, cv.height - 2 * scale + 0.5); ctx.stroke(); ctx.strokeRect(ox + 0.5, oy + 0.5, 48 * scale - 1, 40 * scale - 1); }
+    if (debug) { const { w, h } = frameSize(); ctx.strokeStyle = "#e8466a"; ctx.beginPath(); ctx.moveTo(0, cv.height - footPad + 0.5); ctx.lineTo(cv.width, cv.height - footPad + 0.5); ctx.stroke(); ctx.strokeRect(ox + 0.5, oy + 0.5, w * px - 1, h * px - 1); }
     const zzz = layer.querySelector(".zzz");
     if (current.key.startsWith("sleep:") && !zzz) {
       const z = document.createElement("div"); z.className = "zzz"; z.textContent = "z Z";
-      z.style.left = (ox + (current.flip ? 6 : 34) * scale) + "px"; z.style.top = (oy + 12 * scale) + "px";
+      const { w, h } = frameSize();
+      z.style.left = (ox + (current.flip ? 0.12 : 0.7) * w * px) + "px"; z.style.top = (oy + 0.3 * h * px) + "px";
       layer.appendChild(z);
     } else if (!current.key.startsWith("sleep:") && zzz) zzz.remove();
   }
@@ -45,11 +48,11 @@
   // 커서 아래 칸이 칠해져 있는지
   function hitAt(mx, my) {
     if (!current || !frames[current.key]) return false;
-    const { ox, oy } = origin();
-    let gx = Math.floor((mx - ox) / scale); const gy = Math.floor((my - oy) / scale);
-    if (gx < 0 || gy < 0 || gx >= 48 || gy >= 40) return false;
-    if (current.flip) gx = 47 - gx;
-    return !!frames[current.key].px[gy * 48 + gx];
+    const { ox, oy } = origin(), fr = frames[current.key];
+    let gx = Math.floor((mx - ox) / px); const gy = Math.floor((my - oy) / px);
+    if (gx < 0 || gy < 0 || gx >= fr.w || gy >= fr.h) return false;
+    if (current.flip) gx = fr.w - 1 - gx;
+    return !!fr.px[gy * fr.w + gx];
   }
 
   let lastHit = false, pressed = false, mouse = null;
@@ -98,28 +101,29 @@
     layer.appendChild(el);
     setTimeout(() => el.remove(), b.kind === "info" ? 3100 : 1900);
     for (let i = 0; i < (b.hearts || 0); i++) {
-      const h = pixelCanvas(HEART, { o: "#7a1830", "1": "#ffd0dc", "2": "#ff5a7e" }, Math.max(2, scale - 1));
+      const h = pixelCanvas(HEART, { o: "#7a1830", "1": "#ffd0dc", "2": "#ff5a7e" }, 3);
       h.className = "heart";
       h.style.left = (cv.width / 2 - 8 + (Math.random() * 40 - 20)) + "px";
-      h.style.top = (oy + 6 * scale) + "px";
+      h.style.top = (oy + 0.15 * frameSize().h * px) + "px";
       h.style.setProperty("--dx", (Math.random() * 40 - 20) + "px");
       h.style.animationDelay = (i * 0.14) + "s";
       layer.appendChild(h);
       setTimeout(() => h.remove(), 1600 + i * 140);
     }
     if (b.bowl) {
-      const bowl = pixelCanvas(BOWL, { o: "#5a1f1f", "1": "#ff7b7b", "2": "#e2474a", "4": "#a86a3a", "5": "#cf9358" }, scale);
+      const bowl = pixelCanvas(BOWL, { o: "#5a1f1f", "1": "#ff7b7b", "2": "#e2474a", "4": "#a86a3a", "5": "#cf9358" }, 3);
       bowl.className = "heart";
       bowl.style.animation = "none";
-      bowl.style.left = (current && current.flip ? ox - 6 * scale : ox + 40 * scale) + "px";
-      bowl.style.top = (cv.height - 2 * scale - bowl.height) + "px";
+      const fw = frameSize().w * px;
+      bowl.style.left = (current && current.flip ? ox - bowl.width * 0.4 : ox + fw * 0.83) + "px";
+      bowl.style.top = (cv.height - footPad - bowl.height) + "px";
       layer.appendChild(bowl);
       setTimeout(() => bowl.remove(), 3200);
     }
   });
 
-  window.pet.on("pet:frames", d => { frames = d.frames; scale = d.scale; cache.clear(); resize(); });
-  window.pet.on("pet:scale", s => { scale = s; cache.clear(); resize(); });
+  window.pet.on("pet:frames", d => { frames = d.frames; px = d.px; footPad = d.footPad; cache.clear(); resize(); });
+  window.pet.on("pet:scale", d => { px = d.px; footPad = d.footPad; cache.clear(); resize(); });
   window.pet.on("pet:show", f => { current = f; draw(); updateHit(); });
   window.pet.on("pet:debug", on => { debug = on; draw(); });
   window.addEventListener("resize", resize);

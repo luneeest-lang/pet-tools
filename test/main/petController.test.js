@@ -256,7 +256,7 @@ test("hanging from the edge puts the front paws on the window top, then it drops
   let sawHang = false;
   for (let i = 0; i < 200 * 15; i++) {
     run(1 / 15, 1 / 15);
-    if (c.getMode() === "hang") { sawHang = true; assert.strictEqual(c.getBody().y, 600 + 17 * 3); }
+    if (c.getMode() === "hang") { sawHang = true; assert.strictEqual(c.getBody().y, 600 + c.getGeometry().hangDropPx); }
   }
   assert.ok(sawHang, "hung from the edge");
   assert.ok(log.frames.some(f => f.key.startsWith("held:")));
@@ -340,7 +340,7 @@ test("a window piece narrower than the pet does not make it flip back and forth"
   c.setWindows([WIN(600, 500, 280, 400, "F"), WIN(700, 600, 300, 400, "A")]);
   run(0.3);
   const narrow = c.getFloors().find(f => f.windowId === "A");
-  assert.ok(narrow && narrow.x2 - narrow.x1 < 2 * 22 * 3, JSON.stringify(c.getFloors()));
+  assert.ok(narrow && narrow.x2 - narrow.x1 < 2 * c.getGeometry().halfWpx, JSON.stringify(c.getFloors()));
   dropOn(c, at, (narrow.x1 + narrow.x2) / 2, 500);
   run(1.5);
   const from = log.frames.length;

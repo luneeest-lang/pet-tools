@@ -20,15 +20,19 @@ const TRICK_FRAMES = { stretch: 2, roll: 2, chase: 4 };
 const JUMP_EVERY = [120, 240], STAY_ON_WINDOW = [30, 180], HANG_SECONDS = [3, 6];
 const CROUCH_SECONDS = 0.25, LOOKDOWN_SECONDS = 0.8, CLIMB_SECONDS = 0.3;
 const JUMP_UP_APEX = 40, JUMP_DOWN_APEX = 24;
-const HANG_DROP = 17;   // 매달릴 때 발 선이 창 윗선보다 내려가는 칸 수(앞발이 윗선에 닿게)
+// 매달릴 때 발 선이 창 윗선보다 내려가는 거리 등 몸 치수는 그림 크기에 따라 geometry.js가 정한다.
 
 function localDay(now) {
   const d = new Date(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function petWindowSize(scale) {
-  return { w: 48 * scale + 80, h: 40 * scale + 110 };
+const { screenGeometry } = require("../sprites/geometry.js");
+
+// 펫 창 크기: 그림 크기 + 말풍선·하트·밥그릇이 들어갈 여백
+function petWindowSize(spec, scale) {
+  const g = screenGeometry(spec, scale);
+  return { w: g.w + 80, h: g.h + 110 };
 }
 
 function createPetController({ save, displays, now, rng = Math.random, onFrame, onMoveWindow, onBubble }) {
@@ -63,7 +67,8 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
   }
   let body = initialBody();
 
-  const halfW = () => 22 * scale;
+  const geo = () => screenGeometry(pet.spec, scale);
+  const halfW = () => geo().halfWpx;
   const bubble = b => onBubble && onBubble(b);
 
   function setMode(m, seconds, v = null) { mode = m; until = t + seconds; variant = v; }
@@ -124,7 +129,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
 
   function jumpDown() {
     const f = floorOf(body.floorId), d = displayOf(f), wa = d.workArea;
-    let tx = dir > 0 ? f.x2 + 30 * scale : f.x1 - 30 * scale;
+    let tx = dir > 0 ? f.x2 + geo().hopOutPx : f.x1 - geo().hopOutPx;
     tx = Math.min(Math.max(tx, wa.x + halfW()), wa.x + wa.width - halfW());
     const below = floorBelow(tx, f.y + 1, floors) || floors.find(fl => fl.kind === "ground" && fl.displayId === d.id);
     startJump({ x: tx, y: below.y }, JUMP_DOWN_APEX);
@@ -132,8 +137,8 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
 
   function hang() {
     const f = floorOf(body.floorId);
-    const x = dir > 0 ? f.x2 - 8 * scale : f.x1 + 8 * scale;
-    body = { x, y: f.y + HANG_DROP * scale, vx: 0, vy: 0, state: "hang", floorId: f.id };
+    const x = dir > 0 ? f.x2 - geo().edgeInPx : f.x1 + geo().edgeInPx;
+    body = { x, y: f.y + geo().hangDropPx, vx: 0, vy: 0, state: "hang", floorId: f.id };
     setMode("hang", between(...HANG_SECONDS));
   }
 
@@ -210,7 +215,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
     if (!winId || (body.state !== "ground" && body.state !== "hang")) return;
     const before = prevWins.find(w => w.id === winId), now = wins.find(w => w.id === winId);
     if (!before || !now || !perch) return fallNow();
-    const lift = body.state === "hang" ? HANG_DROP * scale : 0;
+    const lift = body.state === "hang" ? geo().hangDropPx : 0;
     const x = body.x + (now.x - before.x), y = body.y + (now.y - before.y);
     const spot = floors.find(f => f.windowId === winId && Math.abs(f.y - (y - lift)) <= 1 && x >= f.x1 && x <= f.x2);
     if (!spot) { body = { ...body, x, y, state: "air" }; return fallNow(); }
@@ -248,8 +253,8 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
       lastKey = key; lastFlip = flip;
       onFrame && onFrame({ key, flip });
     }
-    const { w, h } = petWindowSize(scale);
-    const win = { x: Math.round(body.x - w / 2), y: Math.round(body.y - h + 2 * scale) };
+    const { w, h } = petWindowSize(pet.spec, scale);
+    const win = { x: Math.round(body.x - w / 2), y: Math.round(body.y - h + geo().footPad) };
     if (!lastWin || win.x !== lastWin.x || win.y !== lastWin.y) {
       lastWin = win;
       onMoveWindow && onMoveWindow(win);
@@ -388,6 +393,7 @@ function createPetController({ save, displays, now, rng = Math.random, onFrame, 
       setMode("fall", Infinity);
     },
     getFrame: () => ({ key: lastKey, flip: !!lastFlip }),
+    getGeometry: () => geo(),
     getBody: () => ({ ...body }),
     getMode: () => mode,
     getPet: () => pet,

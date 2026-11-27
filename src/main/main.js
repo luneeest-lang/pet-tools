@@ -28,9 +28,10 @@ const displaysNow = () => screen.getAllDisplays().map(d => ({ id: d.id, bounds: 
 function sendFrames() {
   const pet = state.controller.getPet();
   const frames = {};
-  for (const [key, fr] of renderAllFrames(pet.spec)) frames[key] = { px: fr.px, shadow: fr.shadow };
+  for (const [key, fr] of renderAllFrames(pet.spec)) frames[key] = { w: fr.w, h: fr.h, px: fr.px, shadow: fr.shadow };
   state.frames = frames;
-  state.win.webContents.send("pet:frames", { frames, scale: state.controller.getSave().settings.scale });
+  const g = state.controller.getGeometry();
+  state.win.webContents.send("pet:frames", { frames, px: g.px, footPad: g.footPad });
 }
 
 function save() {
@@ -43,7 +44,7 @@ function updateHit() {
   if (!state.win || state.win.isDestroyed()) return;
   const f = state.controller.getFrame();
   const hit = state.pointerDown || (!state.hidden && hitTest({
-    frames: state.frames, key: f.key, flip: f.flip, scale: state.controller.getSave().settings.scale,
+    frames: state.frames, key: f.key, flip: f.flip, px: state.controller.getGeometry().px,
     win: state.win.getBounds(), cursor: screen.getCursorScreenPoint()
   }));
   if (hit === state.lastHit) return;
@@ -102,12 +103,14 @@ function applyStartup(settings) {
 
 function start() {
   state.lang = (state.data.settings.language) || (app.getLocale().startsWith("ko") ? "ko" : "en");
-  state.win = createPetWindow(state.data.settings.scale);
+  const firstPet = state.data.pets.find(p => p.id === state.data.activePetIds[0]) || state.data.pets[0];
+  state.win = createPetWindow(petWindowSize(firstPet.spec, state.data.settings.scale));
   state.controller = createPetController({
     save: state.data, displays: displaysNow(), now: Date.now(),
     onFrame: f => state.win.webContents.send("pet:show", f),
     onMoveWindow: p => {
-      const { w, h } = petWindowSize(state.controller ? state.controller.getSave().settings.scale : state.data.settings.scale);
+      const c = state.controller;
+      const { w, h } = c ? petWindowSize(c.getPet().spec, c.getSave().settings.scale) : petWindowSize(firstPet.spec, state.data.settings.scale);
       state.win.setBounds({ x: p.x, y: p.y, width: w, height: h });
     },
     onBubble: b => { diag.log("bubble", b.kind); state.win.webContents.send("pet:bubble", { ...b, text: bubbleText(b, state.lang) }); }
@@ -146,7 +149,11 @@ function start() {
   });
   ipcMain.handle("settings:set", (_e, patch) => {
     const settings = state.controller.getSave().settings;
-    if (patch.scale && [2, 3, 4].includes(patch.scale)) { state.controller.setScale(patch.scale); state.win.webContents.send("pet:scale", patch.scale); }
+    if (patch.scale && [2, 3, 4].includes(patch.scale)) {
+      state.controller.setScale(patch.scale);
+      const g = state.controller.getGeometry();
+      state.win.webContents.send("pet:scale", { px: g.px, footPad: g.footPad });
+    }
     if (typeof patch.launchAtStartup === "boolean") { settings.launchAtStartup = patch.launchAtStartup; applyStartup(settings); }
     if (typeof patch.perchOnWindows === "boolean") state.controller.setPerch(patch.perchOnWindows);
     if (typeof patch.hideOnFullscreen === "boolean") settings.hideOnFullscreen = patch.hideOnFullscreen;

@@ -23,7 +23,7 @@ test("every preset draws every frame with a real body inside the grid", () => {
     const all = renderAllFrames(p.spec);
     assert.strictEqual(all.size, FRAME_LIST.length);
     for (const [key, fr] of all) {
-      assert.strictEqual(fr.px.length, 1920, key);
+      assert.strictEqual(fr.px.length, fr.w * fr.h, key);
       const painted = fr.px.filter(Boolean).length;
       assert.ok(painted >= 300, `${p.id} ${key}: ${painted} painted`);
     }

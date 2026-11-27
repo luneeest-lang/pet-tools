@@ -96,3 +96,10 @@ test("if the broken file cannot be moved aside, the app still starts from defaul
     assert.strictEqual(r.data.pets[0].presetId, "shiba");
   } finally { fs.renameSync = rename; }
 });
+
+test("an adopted Bori from before the Gemini art switches to the new art", () => {
+  const s = defaultSave(NOW, "ko");
+  delete s.pets[0].spec.pack;
+  const m = migrate(JSON.parse(JSON.stringify(s)), NOW, "ko");
+  assert.strictEqual(m.pets[0].spec.pack, "shiba-gemini");
+});
