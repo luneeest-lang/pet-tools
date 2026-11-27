@@ -16,7 +16,8 @@ function load() {
       IsIconic: user32.func("bool __stdcall IsIconic(void* hWnd)"),
       GetWindowLongPtrW: user32.func("intptr __stdcall GetWindowLongPtrW(void* hWnd, int nIndex)"),
       GetWindowThreadProcessId: user32.func("uint32 __stdcall GetWindowThreadProcessId(void* hWnd, _Out_ uint32* pid)"),
-      GetWindowTextLengthW: user32.func("int __stdcall GetWindowTextLengthW(void* hWnd)"),
+      // 제목 읽기: GetWindowTextLength와 달리 창에 메시지를 보내지 않아, 응답 없는 창 때문에 멈추지 않는다.
+      InternalGetWindowText: user32.func("int __stdcall InternalGetWindowText(void* hWnd, _Out_ uint16_t* buf, int max)"),
       GetClassNameW: user32.func("int __stdcall GetClassNameW(void* hWnd, _Out_ uint16_t* buf, int max)"),
       GetForegroundWindow: user32.func("void* __stdcall GetForegroundWindow()"),
       // 같은 함수를 출력 형식만 바꿔 두 번 묶는다(이름 충돌을 피하려고 이름·인자를 따로 적는다).
@@ -52,7 +53,7 @@ function describe(a, h) {
   const base = { hwnd: idOf(a, h), visible: true, rect: { left: 0, top: 0, right: 0, bottom: 0 }, className: "", pid: 0 };
   if (a.IsIconic(h)) return { ...base, minimized: true };
   if ((Number(a.GetWindowLongPtrW(h, GWL_EXSTYLE)) & WS_EX_TOOLWINDOW) !== 0) return { ...base, toolWindow: true };
-  const titleLength = a.GetWindowTextLengthW(h);
+  const titleLength = a.InternalGetWindowText(h, new Uint16Array(4), 4);
   if (!(titleLength > 0)) return { ...base, titleLength };
   const cloaked = [0];
   a.DwmGetInt(h, DWMWA_CLOAKED, cloaked, 4);

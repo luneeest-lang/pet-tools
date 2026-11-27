@@ -49,6 +49,7 @@ function updateHit() {
   }));
   if (hit === state.lastHit) return;
   state.lastHit = hit;
+  if (state.debug) diag.log("hit", { hit, key: f.key, cursor: screen.getCursorScreenPoint(), win: state.win.getBounds(), px: state.controller.getGeometry().px });
   state.win.setIgnoreMouseEvents(!hit, { forward: true });
   state.controller.hover(hit && !state.pointerDown);
 }
@@ -118,6 +119,7 @@ function start() {
 
   ipcMain.on("pet:ready", () => sendFrames());
   ipcMain.on("pet:pointer", (_e, p) => {
+    if (state.debug && p.type !== "move") diag.log("pointer", p);
     state.pointerDown = p.type !== "up";
     if (p.type === "down") state.controller.grab(p.x, p.y, Date.now());
     else if (p.type === "move") state.controller.drag(p.x, p.y);
@@ -182,13 +184,23 @@ function start() {
   setInterval(save, SAVE_EVERY_MS);
   diag.log("win32", win32Status());
   let polls = 0;
+  // 진단: 메인 스레드가 멈췄던 시간(창 목록 읽기 등)을 기록한다.
+  let lastBeat = Date.now();
+  setInterval(() => {
+    const gap = Date.now() - lastBeat;
+    if (gap > 500) diag.log("stall", { ms: gap });
+    lastBeat = Date.now();
+  }, 100);
   setInterval(() => {
     polls++;
+    const t0 = Date.now();
     const perched = /^win:/.test(state.controller.getBody().floorId || "") ? state.controller.getBody().floorId.split(":")[1] : null;
     try {
       if (polls % 4 === 0) pollWindows();
       else if (perched) pollPerchedWindow(perched);
     } catch (e) { diag.log("poll-error", e.stack || String(e)); }
+    const took = Date.now() - t0;
+    if (took > 100) diag.log("slow-poll", { ms: took, windows: state.wins.length });
   }, 50);
   state.hooks.forEach(h => h("started"));
 }
